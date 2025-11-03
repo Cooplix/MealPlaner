@@ -1,0 +1,15 @@
+# Frontend artefacts
+front/node_modules
+front/dist
+
+# Python artefacts
+**/__pycache__/
+**/*.py[cod]
+
+# Editor junk
+.idea/
+.vscode/
+
+# Local env files
+.env
+.env.*

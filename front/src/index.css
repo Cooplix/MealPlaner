@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@source "./index.html";
+@source "./src/**/*.{js,ts,jsx,tsx}";
+
+:root {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: var(--color-gray-900, #111827);
+  background-color: var(--color-gray-50, #f9fafb);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background-color: transparent;
+}

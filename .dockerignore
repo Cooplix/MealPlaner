@@ -1,0 +1,8 @@
+/front/node_modules
+/front/dist
+/.git
+/.gitignore
+/.idea
+**/__pycache__
+**/*.py[cod]
+/docker/frontend/nginx.conf~

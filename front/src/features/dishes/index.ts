@@ -1,0 +1,1 @@
+export { DishesPage } from "./DishesPage";
