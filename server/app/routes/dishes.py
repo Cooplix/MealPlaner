@@ -11,6 +11,18 @@ from ..schemas import DishBase, DishCreate, DishInDB, DishUpdate, Ingredient, Us
 
 router = APIRouter(prefix="/api/dishes", tags=["dishes"])
 
+
+def _coerce_unit(value: str) -> str:
+    unit = value.strip().lower()
+    if unit in MEASUREMENT_UNITS:
+        return unit
+    return MEASUREMENT_UNITS[0]
+
+
+def _ingredient_key(name: str, unit: str) -> str:
+    return f"{name.strip().lower()}__{_coerce_unit(unit)}"
+
+
 def _collection(db: AsyncIOMotorDatabase):
     settings = get_settings()
     return db[settings.dishes_collection]
@@ -24,16 +36,11 @@ def _calories_collection(db: AsyncIOMotorDatabase):
     settings = get_settings()
     return db[settings.calories_collection]
 
-def _to_key(name: str) -> str:
-    return "".join(ch.lower() for ch in name.strip() if ch.isalnum() or ch.isspace()).replace(" ", "-")
-
 def _normalize_ingredients(raw: List[dict]) -> List[Ingredient]:
     normalized: List[Ingredient] = []
     for item in raw or []:
         ingredient = Ingredient.model_validate(item)
-        unit = ingredient.unit.strip()
-        if unit not in MEASUREMENT_UNITS:
-            unit = MEASUREMENT_UNITS[0]
+        unit = _coerce_unit(ingredient.unit)
         qty = float(ingredient.qty) if ingredient.qty is not None else 0.0
         normalized.append(
             Ingredient(
@@ -55,7 +62,7 @@ def _serialize_dish(doc: dict) -> DishBase:
 async def _ensure_ingredient_entries(db: AsyncIOMotorDatabase, ingredients: List[Ingredient]) -> None:
     coll = _ingredients_collection(db)
     for ing in ingredients:
-        key = _to_key(ing.name)
+        key = _ingredient_key(ing.name, ing.unit)
         updates: dict[str, dict] = {
             "$setOnInsert": {
                 "key": key,
@@ -64,7 +71,7 @@ async def _ensure_ingredient_entries(db: AsyncIOMotorDatabase, ingredients: List
         }
         set_payload = updates.setdefault("$set", {})
         set_payload["name"] = ing.name.strip()
-        set_payload["unit"] = ing.unit.strip()
+        set_payload["unit"] = _coerce_unit(ing.unit)
         await coll.update_one(
             {"key": key},
             updates,
@@ -78,16 +85,16 @@ async def _compute_dish_calories(
     if not ingredients:
         return 0.0
 
-    keys = {_to_key(ing.name) for ing in ingredients}
+    keys = {_ingredient_key(ing.name, ing.unit) for ing in ingredients}
     mapping: Dict[Tuple[str, str], List[dict]] = {}
     cursor = _calories_collection(db).find({"ingredient_key": {"$in": list(keys)}})
     async for doc in cursor:
-        bucket = mapping.setdefault((doc["ingredient_key"], doc["unit"]), [])
+        bucket = mapping.setdefault((doc["ingredient_key"], _coerce_unit(doc["unit"])), [])
         bucket.append(doc)
 
     total = 0.0
     for ingredient in ingredients:
-        key = _to_key(ingredient.name)
+        key = _ingredient_key(ingredient.name, ingredient.unit)
         candidates = mapping.get((key, ingredient.unit))
         if not candidates:
             continue

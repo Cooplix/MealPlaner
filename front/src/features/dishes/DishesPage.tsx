@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
@@ -19,7 +19,29 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+
+  const getOptionForIngredient = useCallback(
+    (ingredient: Ingredient) =>
+      ingredientOptions.find(
+        (option) =>
+          option.name.toLowerCase() === ingredient.name.toLowerCase() &&
+          option.unit.toLowerCase() === ingredient.unit.toLowerCase(),
+      ),
+    [ingredientOptions],
+  );
+
+  const ingredientDisplayName = useCallback(
+    (ingredient: Ingredient): string => {
+      const option = getOptionForIngredient(ingredient);
+      if (option && ingredient.name === option.name) {
+        const localized = option.translations[language];
+        if (localized && localized.trim().length > 0) return localized;
+      }
+      return ingredient.name;
+    },
+    [getOptionForIngredient, language],
+  );
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
@@ -155,7 +177,7 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
             <ul className="mt-3 text-sm list-disc list-inside text-gray-700">
               {dish.ingredients.map((ingredient) => (
                 <li key={ingredient.id}>
-                  {ingredient.name} — {ingredient.qty} {formatUnit(ingredient.unit)}
+                  {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
                 </li>
               ))}
             </ul>
@@ -191,6 +213,23 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
   }));
   const [existingChoice, setExistingChoice] = useState<string>("");
   const { t, language } = useTranslation();
+  const optionMap = useMemo(() => {
+    const map = new Map<string, IngredientOption>();
+    ingredientOptions.forEach((option) => {
+      map.set(`${option.name.toLowerCase()}__${option.unit.toLowerCase()}`, option);
+    });
+    return map;
+  }, [ingredientOptions]);
+
+  function displayNameForIngredient(ingredient: Ingredient): string {
+    const key = `${ingredient.name.toLowerCase()}__${ingredient.unit.toLowerCase()}`;
+    const option = optionMap.get(key);
+    if (option && ingredient.name === option.name) {
+      const localized = option.translations[language];
+      if (localized && localized.trim().length > 0) return localized;
+    }
+    return ingredient.name;
+  }
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
@@ -378,10 +417,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
                 <option value="">{t("dishes.editor.selectExisting")}</option>
                 {availableExisting.map((option) => (
                   <option key={option.key} value={option.key}>
-                    {option.name} · {formatUnit(option.unit)}
-                    {option.translations[language]
-                      ? ` — ${option.translations[language]}`
-                      : ""}
+                    {option.translations[language] ?? option.name} · {formatUnit(option.unit)}
                   </option>
                 ))}
               </select>
@@ -404,19 +440,21 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
               <input
                 className="rounded-xl border px-3 py-2 sm:col-span-4"
                 placeholder={t("dishes.editor.ingredientNamePlaceholder")}
-                value={ingredient.name}
+                value={displayNameForIngredient(ingredient)}
                 onChange={(event) => handleNameChange(ingredient.id, event.target.value)}
                 list={`ingredient-suggestions-${ingredient.id}`}
               />
               <datalist id={`ingredient-suggestions-${ingredient.id}`}>
-                {suggestionList(ingredient.name).map((option) => (
-                  <option key={option.key} value={option.name}>
-                    {option.name} · {formatUnit(option.unit)}
-                    {option.translations[language]
-                      ? ` — ${option.translations[language]}`
-                      : ""}
-                  </option>
-                ))}
+                {suggestionList(ingredient.name).map((option) => {
+                  const localized = option.translations[language];
+                  const value = localized && localized.trim().length > 0 ? localized : option.name;
+                  const label = localized && localized.trim().length > 0 ? localized : option.name;
+                  return (
+                    <option key={option.key} value={value}>
+                      {label} · {formatUnit(option.unit)}
+                    </option>
+                  );
+                })}
               </datalist>
               <input
                 type="number"
