@@ -7,21 +7,22 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from ..auth import hash_password
 from ..config import get_settings
 
-
 async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     settings = get_settings()
     await db[settings.users_collection].create_index("login", unique=True)
     await db[settings.ingredients_collection].create_index("key", unique=True)
     await db[settings.dishes_collection].create_index("created_by", name="idx_dishes_created_by", sparse=True)
 
-
 async def ensure_admin_user(db: AsyncIOMotorDatabase) -> None:
     settings = get_settings()
     admin_login = settings.admin_login
     collection = db[settings.users_collection]
+
     existing = await collection.find_one({"login": admin_login})
     if existing:
+        logging.info("Admin user '%s' already exists", admin_login)
         return
+
     initial_password: Optional[str] = os.getenv("ADMIN_INITIAL_PASSWORD")
     if not initial_password:
         logging.warning(

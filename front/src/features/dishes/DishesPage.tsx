@@ -118,7 +118,14 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
                 <h3 className="text-lg font-semibold text-gray-900">
                   {dish.name || t("dishes.untitled")}
                 </h3>
-                <p className="text-xs text-gray-500">{t(MEAL_LABEL_KEYS[dish.meal])}</p>
+                <p className="text-xs text-gray-500">
+                    {t(MEAL_LABEL_KEYS[dish.meal])}
+                </p>
+                  {(dish.createdByName || dish.createdBy) && (
+                      <p className="text-xs text-gray-400">
+                          Added by {dish.createdByName ?? dish.createdBy}
+                      </p>
+                  )}
               </div>
               <div className="flex gap-2">
                 <button

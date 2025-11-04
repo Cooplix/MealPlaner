@@ -16,6 +16,10 @@ services:
     environment:
       MONGODB_URI: mongodb://mongo:27017
       MONGODB_DB: mealplanner
+      JWT_SECRET: please-change-me
+      JWT_EXP_MINUTES: 120
+      ADMIN_LOGIN: admin
+      ADMIN_INITIAL_PASSWORD: ChangeMeNow123!
     depends_on:
       - mongo
     ports:
