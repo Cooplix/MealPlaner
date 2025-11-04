@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 interface HeaderMenuProps {
   menuLabel: string;
+  profileLabel: string;
   ingredientsLabel: string;
   caloriesLabel: string;
   logoutLabel: string;
+  onSelectProfile: () => void;
   onSelectIngredients: () => void;
   onSelectCalories: () => void;
   onLogout: () => void;
@@ -12,9 +14,11 @@ interface HeaderMenuProps {
 
 export function HeaderMenu({
   menuLabel,
+  profileLabel,
   ingredientsLabel,
   caloriesLabel,
   logoutLabel,
+  onSelectProfile,
   onSelectIngredients,
   onSelectCalories,
   onLogout,
@@ -58,6 +62,11 @@ export function HeaderMenu({
     setOpen(false);
   }
 
+  function selectProfile() {
+    onSelectProfile();
+    setOpen(false);
+  }
+
   function logout() {
     onLogout();
     setOpen(false);
@@ -79,6 +88,13 @@ export function HeaderMenu({
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          <button
+            type="button"
+            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            onClick={selectProfile}
+          >
+            {profileLabel}
+          </button>
           <button
             type="button"
             className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"

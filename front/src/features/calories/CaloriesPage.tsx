@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { CalorieEntry, IngredientOption } from "../../types";
+import { getIngredientOptionLabel } from "../../utils/ingredientNames";
 
 interface CaloriesPageProps {
   ingredients: IngredientOption[];
@@ -40,17 +41,25 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
   const ingredientMap = useMemo(() => new Map(ingredients.map((item) => [item.key, item])), [ingredients]);
+  const optionLabel = useCallback(
+    (option: IngredientOption | undefined) => (option ? getIngredientOptionLabel(option, language) : undefined),
+    [language],
+  );
+  const entryLabel = useCallback(
+    (entry: CalorieEntry) => optionLabel(ingredientMap.get(entry.ingredientKey)) ?? entry.ingredientName,
+    [ingredientMap, optionLabel],
+  );
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => {
-      const nameA = a.ingredientName.toLocaleLowerCase(language);
-      const nameB = b.ingredientName.toLocaleLowerCase(language);
+      const nameA = entryLabel(a).toLocaleLowerCase(language);
+      const nameB = entryLabel(b).toLocaleLowerCase(language);
       if (nameA === nameB) {
         return a.unit.localeCompare(b.unit);
       }
       return nameA.localeCompare(nameB);
     }),
-    [entries, language],
+    [entries, language, entryLabel],
   );
 
   const formatUnit = (value: string): string => {
@@ -176,7 +185,7 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
             >
               {ingredients.map((ingredient) => (
                 <option key={ingredient.key} value={ingredient.key}>
-                  {ingredient.name}
+                  {optionLabel(ingredient) ?? ingredient.name}
                 </option>
               ))}
             </select>
@@ -305,7 +314,7 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
                         >
                         {ingredientOptionsForEntry.map((ingredient) => (
                           <option key={ingredient.key} value={ingredient.key}>
-                            {ingredient.name}
+                            {optionLabel(ingredient) ?? ingredient.name}
                           </option>
                         ))}
                         </select>

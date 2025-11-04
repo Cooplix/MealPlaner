@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "../../i18n";
-import type { ShoppingListItem, ShoppingListResponse } from "../../types";
+import type { IngredientOption, ShoppingListItem, ShoppingListResponse } from "../../types";
 import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
+import { getLocalizedIngredientName } from "../../utils/ingredientNames";
 
 interface ShoppingPageProps {
   fetchList: (start: string, end: string) => Promise<ShoppingListResponse>;
+  ingredientOptions: IngredientOption[];
 }
 
-export function ShoppingPage({ fetchList }: ShoppingPageProps) {
+export function ShoppingPage({ fetchList, ingredientOptions }: ShoppingPageProps) {
   const [rangeStart, setRangeStart] = useState<string>(() => {
     const monday = startOfWeek(new Date());
     return toDateISO(monday);
@@ -21,11 +23,24 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
   };
+  const resolveIngredientName = useCallback(
+    (name: string, unit: string) =>
+      getLocalizedIngredientName(ingredientOptions, language, name, unit),
+    [ingredientOptions, language],
+  );
+  const localizedItems = useMemo(
+    () =>
+      items.map((item) => ({
+        item,
+        displayName: resolveIngredientName(item.name, item.unit),
+      })),
+    [items, resolveIngredientName],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +118,11 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
       <div className="rounded-2xl border bg-white p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">{t("shopping.title")}</h3>
-          <ExportButton items={items} disabled={!items.length} />
+          <ExportButton
+            items={items}
+            disabled={!items.length}
+            resolveIngredientName={resolveIngredientName}
+          />
         </div>
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -112,7 +131,7 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
         )}
         {loading ? (
           <div className="text-gray-500">{t("shopping.loading")}</div>
-        ) : items.length ? (
+        ) : localizedItems.length ? (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b">
@@ -123,17 +142,17 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {localizedItems.map(({ item, displayName }) => (
                 <tr key={item.name + item.unit} className="border-b">
                   <td className="py-2">
                     <input
                       type="checkbox"
-                      aria-label={`${t("shopping.columns.product")}: ${item.name}`}
+                      aria-label={`${t("shopping.columns.product")}: ${displayName}`}
                       checked={checked[shoppingKey(item)] ?? false}
                       onChange={() => toggleItem(item)}
                     />
                   </td>
-                  <td className="py-2">{item.name}</td>
+                  <td className="py-2">{displayName}</td>
                   <td className="py-2">{Number(item.qty.toFixed(2))}</td>
                   <td className="py-2">{formatUnit(item.unit)}</td>
                 </tr>
@@ -151,15 +170,20 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
 interface ExportButtonProps {
   items: ShoppingListItem[];
   disabled: boolean;
+  resolveIngredientName: (name: string, unit: string) => string;
 }
 
-function ExportButton({ items, disabled }: ExportButtonProps) {
+function ExportButton({ items, disabled, resolveIngredientName }: ExportButtonProps) {
   const { t } = useTranslation();
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
   function asText() {
     return items
       .map(
         (item) =>
-          `• ${item.name}: ${Number(item.qty.toFixed(2))} ${item.unit} (${item.dishes.join(", ") || "—"})`,
+          `• ${resolveIngredientName(item.name, item.unit)}: ${Number(item.qty.toFixed(2))} ${formatUnit(item.unit)} (${item.dishes.join(", ") || "—"})`,
       )
       .join("\n");
   }

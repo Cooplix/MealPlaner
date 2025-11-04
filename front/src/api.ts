@@ -3,6 +3,7 @@ import type {
     DayPlan,
     Dish,
     IngredientOption,
+    PurchaseEntry,
     ShoppingListResponse,
     TokenResponse,
     UserProfile,
@@ -73,8 +74,12 @@ async function request<T>(path: string, init?: RequestInit, includeAuth = true):
 }
 
 function sanitizeDishPayload(dish: Dish): Partial<Dish> {
-    const {id, createdBy, createdByName, calories, ...rest} = dish;
-    return {...rest, id};
+    const {id, ...rest} = dish;
+    const payload: Partial<Dish> = {...rest, id};
+    delete (payload as Partial<Dish>).createdBy;
+    delete (payload as Partial<Dish>).createdByName;
+    delete (payload as Partial<Dish>).calories;
+    return payload;
 }
 
 function sortedByName(dishes: Dish[]): Dish[] {
@@ -101,6 +106,37 @@ export const api = {
 
     async currentUser(): Promise<UserProfile> {
         return request<UserProfile>("/users/me");
+    },
+
+    async updateProfileName(name: string): Promise<UserProfile> {
+        return request<UserProfile>("/users/me", {
+            method: "PATCH",
+            body: JSON.stringify({name}),
+        });
+    },
+
+    async changePassword(payload: { currentPassword: string; newPassword: string }): Promise<void> {
+        await request<void>("/users/me/password", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+    },
+
+    async createUser(payload: {
+        login: string;
+        name: string;
+        password: string;
+        isAdmin?: boolean;
+    }): Promise<UserProfile> {
+        return request<UserProfile>("/users", {
+            method: "POST",
+            body: JSON.stringify({
+                login: payload.login,
+                name: payload.name,
+                password: payload.password,
+                is_admin: Boolean(payload.isAdmin),
+            }),
+        });
     },
 
     async listDishes(): Promise<Dish[]> {
@@ -212,6 +248,32 @@ export const api = {
     }): Promise<CalorieEntry> {
         return request<CalorieEntry>(`/calories/${encodeURIComponent(id)}`, {
             method: "PATCH",
+            body: JSON.stringify(payload),
+        });
+    },
+
+    async listPurchases(params?: {
+        start?: string;
+        end?: string;
+        ingredientKey?: string;
+    }): Promise<PurchaseEntry[]> {
+        const query = new URLSearchParams();
+        if (params?.start) query.set("start", params.start);
+        if (params?.end) query.set("end", params.end);
+        if (params?.ingredientKey) query.set("ingredientKey", params.ingredientKey);
+        const suffix = query.toString() ? `?${query.toString()}` : "";
+        return request<PurchaseEntry[]>(`/purchases${suffix}`);
+    },
+
+    async createPurchase(payload: {
+        ingredientKey: string;
+        amount: number;
+        unit: string;
+        price: number;
+        purchasedAt: string;
+    }): Promise<PurchaseEntry> {
+        return request<PurchaseEntry>("/purchases", {
+            method: "POST",
             body: JSON.stringify(payload),
         });
     },

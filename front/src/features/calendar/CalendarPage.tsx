@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { useTranslation } from "../../i18n";
-import type { DayPlan, Dish, MealSlot } from "../../types";
+import type { DayPlan, Dish, IngredientOption, MealSlot } from "../../types";
 import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
+import { getLocalizedIngredientName } from "../../utils/ingredientNames";
 
 interface CalendarPageProps {
   dishes: Dish[];
   plans: DayPlan[];
+  ingredientOptions: IngredientOption[];
   onUpsertPlan: (plan: DayPlan) => Promise<void>;
   onDeletePlan: (dateISO: string) => Promise<void>;
 }
@@ -15,6 +17,7 @@ interface CalendarPageProps {
 export function CalendarPage({
   dishes,
   plans,
+  ingredientOptions,
   onUpsertPlan,
   onDeletePlan,
 }: CalendarPageProps) {
@@ -117,6 +120,12 @@ export function CalendarPage({
     return map;
   }, [dishes]);
 
+  const resolveIngredientName = useCallback(
+    (name: string, unit: string) =>
+      getLocalizedIngredientName(ingredientOptions, language, name, unit),
+    [ingredientOptions, language],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -173,6 +182,7 @@ export function CalendarPage({
                       onChange={(dishId) => setSlot(iso, slot, dishId)}
                       busy={busyDate === iso}
                       allDishes={dishes}
+                      resolveIngredientName={resolveIngredientName}
                     />
                   ))}
                 </div>
@@ -222,12 +232,12 @@ export function CalendarPage({
                     </button>
                   </div>
           <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
-                    {dish.ingredients.slice(0, 4).map((ingredient) => (
-                      <li key={ingredient.id}>
-                        {ingredient.name} ({ingredient.qty}
-                        {formatUnit(ingredient.unit)})
-                      </li>
-                    ))}
+                {dish.ingredients.slice(0, 4).map((ingredient) => (
+                  <li key={ingredient.id}>
+                    {resolveIngredientName(ingredient.name, ingredient.unit)} ({ingredient.qty}
+                    {formatUnit(ingredient.unit)})
+                  </li>
+                ))}
                     {dish.ingredients.length > 4 && <li>…</li>}
                   </ul>
                 </div>
@@ -250,9 +260,18 @@ interface MealPickerProps {
   value?: string;
   onChange: (value: string | undefined) => Promise<void>;
   busy: boolean;
+  resolveIngredientName: (name: string, unit: string) => string;
 }
 
-function MealPicker({ slot, dishes, value, onChange, busy, allDishes }: MealPickerProps) {
+function MealPicker({
+  slot,
+  dishes,
+  value,
+  onChange,
+  busy,
+  allDishes,
+  resolveIngredientName,
+}: MealPickerProps) {
   const selected = allDishes.find((dish) => dish.id === value) ?? undefined;
   const { t } = useTranslation();
   const formatUnit = (unit: string): string => {
@@ -291,7 +310,7 @@ function MealPicker({ slot, dishes, value, onChange, busy, allDishes }: MealPick
           <ul className="list-disc list-inside">
             {selected.ingredients.map((ingredient) => (
               <li key={ingredient.id}>
-                {ingredient.name} — {ingredient.qty}
+                {resolveIngredientName(ingredient.name, ingredient.unit)} — {ingredient.qty}
                 {formatUnit(ingredient.unit)}
               </li>
             ))}

@@ -1,5 +1,7 @@
 import logging
 import os
+import random
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -24,6 +26,14 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db[settings.users_collection].create_index("login", unique=True)
     await db[settings.ingredients_collection].create_index("key", unique=True)
     await db[settings.dishes_collection].create_index("created_by", name="idx_dishes_created_by", sparse=True)
+    await db[settings.purchases_collection].create_index(
+        [("purchased_at", 1)],
+        name="idx_purchases_purchased_at",
+    )
+    await db[settings.purchases_collection].create_index(
+        [("ingredient_key", 1)],
+        name="idx_purchases_ingredient_key",
+    )
 
 async def ensure_admin_user(db: AsyncIOMotorDatabase) -> None:
     settings = get_settings()
@@ -120,6 +130,77 @@ async def ensure_calorie_fields(db: AsyncIOMotorDatabase) -> None:
                 {"_id": dish["_id"]},
                 {"$set": {"ingredients": updated_ingredients}},
             )
+
+
+async def seed_sample_purchases(db: AsyncIOMotorDatabase) -> None:
+    settings = get_settings()
+    purchase_coll = db[settings.purchases_collection]
+    if await purchase_coll.estimated_document_count() > 0:
+        return
+
+    ingredients_coll = db[settings.ingredients_collection]
+    ingredients = await ingredients_coll.find({"key": {"$exists": True}}).limit(10).to_list(length=10)
+    if not ingredients:
+        logging.info("No ingredients available; skipping sample purchases seed")
+        return
+
+    base = datetime.now(tz=timezone.utc)
+    docs: list[dict] = []
+    random.seed(42)
+
+    def default_amount(unit: str) -> float:
+        match unit:
+            case "kg":
+                return 1.0
+            case "g":
+                return 500.0
+            case "mg":
+                return 10000.0
+            case "lb":
+                return 1.0
+            case "oz":
+                return 12.0
+            case "l":
+                return 1.0
+            case "ml":
+                return 750.0
+            case "cup":
+                return 2.0
+            case "tbsp":
+                return 4.0
+            case "tsp":
+                return 6.0
+            case "pcs":
+                return 6.0
+            case _:
+                return 1.0
+
+    for offset in range(30):
+        day = base - timedelta(days=offset)
+        sample_size = min(len(ingredients), 3)
+        sampled = random.sample(ingredients, k=sample_size)
+        for ingredient in sampled:
+            key = ingredient.get("key")
+            unit = (ingredient.get("unit") or "").strip().lower()
+            if not key or unit not in MEASUREMENT_UNITS:
+                continue
+
+            amount = default_amount(unit)
+            price_variation = random.uniform(-2, 5)
+            base_price = 35 + ingredients.index(ingredient) * 8
+            docs.append(
+                {
+                    "ingredient_key": key,
+                    "ingredient_name": ingredient.get("name", key),
+                    "unit": unit,
+                    "amount": float(amount),
+                    "price": round(max(base_price + price_variation + offset * 1.2, 1.0), 2),
+                    "purchased_at": day.replace(hour=7 + random.randint(0, 11), minute=0, second=0, microsecond=0),
+                }
+            )
+
+    if docs:
+        await purchase_coll.insert_many(docs)
 
 
 SEED_INGREDIENTS: list[dict] = [
@@ -387,7 +468,206 @@ SEED_INGREDIENTS: list[dict] = [
         "translations": {"uk": "Насіння соняшнику", "pl": "Pestki słonecznika"},
         "calories": [{"amount": 100, "unit": "g", "calories": 584}],
     },
+    {
+        "name": "Bell pepper (red)",
+        "unit": "g",
+        "translations": {"uk": "Перець болгарський (червоний)", "pl": "Papryka czerwona"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 26}],
+    },
+    {
+        "name": "Cauliflower",
+        "unit": "g",
+        "translations": {"uk": "Цвітна капуста", "pl": "Kalafior"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 25}],
+    },
+    {
+        "name": "Zucchini",
+        "unit": "g",
+        "translations": {"uk": "Цукіні", "pl": "Cukinia"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 17}],
+    },
+    {
+        "name": "Mushrooms (white button)",
+        "unit": "g",
+        "translations": {"uk": "Печериці", "pl": "Pieczarki"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 22}],
+    },
+    {
+        "name": "White potato (baked)",
+        "unit": "g",
+        "translations": {"uk": "Картопля (запечена)", "pl": "Ziemniak (pieczony)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 93}],
+    },
+    {
+        "name": "Orange (medium)",
+        "unit": "pcs",
+        "translations": {"uk": "Апельсин (середній)", "pl": "Pomarańcza (średnia)"},
+        "calories": [{"amount": 1, "unit": "pcs", "calories": 62}],
+    },
+    {
+        "name": "Pear (medium)",
+        "unit": "pcs",
+        "translations": {"uk": "Груша (середня)", "pl": "Gruszka (średnia)"},
+        "calories": [{"amount": 1, "unit": "pcs", "calories": 100}],
+    },
+    {
+        "name": "Grapes",
+        "unit": "g",
+        "translations": {"uk": "Виноград", "pl": "Winogrona"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 69}],
+    },
+    {
+        "name": "Watermelon",
+        "unit": "g",
+        "translations": {"uk": "Кавун", "pl": "Arbuz"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 30}],
+    },
+    {
+        "name": "Peach (medium)",
+        "unit": "pcs",
+        "translations": {"uk": "Персик (середній)", "pl": "Brzoskwinia (średnia)"},
+        "calories": [{"amount": 1, "unit": "pcs", "calories": 58}],
+    },
+    {
+        "name": "Raspberries",
+        "unit": "g",
+        "translations": {"uk": "Малина", "pl": "Maliny"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 52}],
+    },
+    {
+        "name": "Cherries (sweet)",
+        "unit": "g",
+        "translations": {"uk": "Черешня", "pl": "Czereśnie"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 63}],
+    },
+    {
+        "name": "Kiwi (medium)",
+        "unit": "pcs",
+        "translations": {"uk": "Ківі (середній)", "pl": "Kiwi (średnie)"},
+        "calories": [{"amount": 1, "unit": "pcs", "calories": 42}],
+    },
+    {
+        "name": "White rice (dry)",
+        "unit": "g",
+        "translations": {"uk": "Білий рис (сухий)", "pl": "Ryż biały (suchy)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 364}],
+    },
+    {
+        "name": "Buckwheat (dry)",
+        "unit": "g",
+        "translations": {"uk": "Гречка (суха)", "pl": "Kasza gryczana (sucha)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 343}],
+    },
+    {
+        "name": "Barley (dry)",
+        "unit": "g",
+        "translations": {"uk": "Перловка (суха)", "pl": "Kasza jęczmienna (sucha)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 352}],
+    },
+    {
+        "name": "Whole wheat pasta (dry)",
+        "unit": "g",
+        "translations": {"uk": "Цільнозернова паста (суха)", "pl": "Makaron pełnoziarnisty (suchy)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 348}],
+    },
+    {
+        "name": "Whole wheat bread",
+        "unit": "pcs",
+        "translations": {"uk": "Хліб цільнозерновий (скибка)", "pl": "Chleb pełnoziarnisty (kromka)"},
+        "calories": [{"amount": 1, "unit": "pcs", "calories": 80}],
+    },
+    {
+        "name": "Wheat flour (all-purpose)",
+        "unit": "g",
+        "translations": {"uk": "Борошно пшеничне (універсальне)", "pl": "Mąka pszenna (uniwersalna)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 364}],
+    },
+    {
+        "name": "Sugar (white)",
+        "unit": "tbsp",
+        "translations": {"uk": "Цукор (білий)", "pl": "Cukier biały"},
+        "calories": [{"amount": 1, "unit": "tbsp", "calories": 49}],
+    },
+    {
+        "name": "Butter (unsalted)",
+        "unit": "tbsp",
+        "translations": {"uk": "Вершкове масло (несолоне)", "pl": "Masło (niesolone)"},
+        "calories": [{"amount": 1, "unit": "tbsp", "calories": 102}],
+    },
+    {
+        "name": "Feta cheese",
+        "unit": "g",
+        "translations": {"uk": "Сир фета", "pl": "Ser feta"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 264}],
+    },
+    {
+        "name": "Parmesan cheese",
+        "unit": "g",
+        "translations": {"uk": "Сир пармезан", "pl": "Ser parmezan"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 392}],
+    },
+    {
+        "name": "Bacon (cooked)",
+        "unit": "g",
+        "translations": {"uk": "Бекон (смажений)", "pl": "Bekon (smażony)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 541}],
+    },
+    {
+        "name": "Ham (lean)",
+        "unit": "g",
+        "translations": {"uk": "Шинка (пісна)", "pl": "Szynka (chuda)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 139}],
+    },
+    {
+        "name": "Sausage (pork)",
+        "unit": "g",
+        "translations": {"uk": "Ковбаса (свиняча)", "pl": "Kiełbasa (wieprzowa)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 304}],
+    },
+    {
+        "name": "Cod (cooked)",
+        "unit": "g",
+        "translations": {"uk": "Тріска (варена)", "pl": "Dorsz (gotowany)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 105}],
+    },
+    {
+        "name": "Mayonnaise",
+        "unit": "tbsp",
+        "translations": {"uk": "Майонез", "pl": "Majonez"},
+        "calories": [{"amount": 1, "unit": "tbsp", "calories": 94}],
+    },
+    {
+        "name": "Sour cream (18% fat)",
+        "unit": "g",
+        "translations": {"uk": "Сметана (18% жирності)", "pl": "Śmietana (18%)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 188}],
+    },
+    {
+        "name": "Dark chocolate (70% cocoa)",
+        "unit": "g",
+        "translations": {"uk": "Темний шоколад (70% какао)", "pl": "Czekolada gorzka (70% kakao)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 598}],
+    },
+    {
+        "name": "Cashews",
+        "unit": "g",
+        "translations": {"uk": "Горіхи кеш'ю", "pl": "Orzechy nerkowca"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 553}],
+    },
+    {
+        "name": "Green peas (boiled)",
+        "unit": "g",
+        "translations": {"uk": "Зелений горошок (варений)", "pl": "Zielony groszek (gotowany)"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 84}],
+    },
+    {
+        "name": "Cabbage (white)",
+        "unit": "g",
+        "translations": {"uk": "Капуста біла", "pl": "Kapusta biała"},
+        "calories": [{"amount": 100, "unit": "g", "calories": 25}],
+    },
 ]
+
 
 
 async def seed_base_ingredients(db: AsyncIOMotorDatabase) -> None:

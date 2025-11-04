@@ -1,4 +1,4 @@
-from . import auth, calories, dishes, ingredients, plans, shopping, users
+from . import auth, calories, dishes, ingredients, plans, purchases, shopping, users
 
 __all__ = [
     "auth",
@@ -6,6 +6,7 @@ __all__ = [
     "dishes",
     "ingredients",
     "plans",
+    "purchases",
     "shopping",
     "users",
 ]

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -74,6 +74,15 @@ class UserCreate(BaseModel):
     password: str
     is_admin: bool = False
 
+
+class UserUpdateName(BaseModel):
+    name: str
+
+
+class UserPasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=1, alias="currentPassword")
+    new_password: str = Field(..., min_length=6, alias="newPassword")
+
 class LoginRequest(BaseModel):
     login: str
     password: str
@@ -141,3 +150,25 @@ class ShoppingListItem(BaseModel):
 class ShoppingListResponse(BaseModel):
     range: Dict[str, str]  # {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
     items: List[ShoppingListItem]
+
+# --- purchase tracking -----------------------------------------------------
+class PurchaseCreate(BaseModel):
+    ingredient_key: str = Field(..., alias="ingredientKey")
+    amount: float = Field(..., gt=0)
+    unit: MeasurementUnit
+    price: float = Field(..., ge=0)
+    purchased_at: datetime = Field(..., alias="purchasedAt")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class PurchaseEntry(BaseModel):
+    id: str
+    ingredient_key: str = Field(..., alias="ingredientKey")
+    ingredient_name: str = Field(..., alias="ingredientName")
+    amount: float
+    unit: MeasurementUnit
+    price: float = Field(..., ge=0)
+    purchased_at: datetime = Field(..., alias="purchasedAt")
+
+    model_config = ConfigDict(populate_by_name=True)

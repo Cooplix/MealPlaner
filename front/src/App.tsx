@@ -15,10 +15,21 @@ import {DishesPage} from "./features/dishes/DishesPage";
 import {IngredientsPage} from "./features/ingredients/IngredientsPage";
 import {ShoppingPage} from "./features/shopping/ShoppingPage";
 import {CaloriesPage} from "./features/calories/CaloriesPage";
+import {ProfilePage} from "./features/profile/ProfilePage";
+import {PurchasesPage} from "./features/purchases/PurchasesPage";
+import {SpendingPage} from "./features/spending/SpendingPage";
 
-import type {CalorieEntry, DayPlan, Dish, IngredientOption, ShoppingListResponse, UserProfile,} from "./types";
+import type {
+    CalorieEntry,
+    DayPlan,
+    Dish,
+    IngredientOption,
+    PurchaseEntry,
+    ShoppingListResponse,
+    UserProfile,
+} from "./types";
 
-type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories";
+type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories" | "purchases" | "spending" | "profile";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -37,6 +48,7 @@ function App() {
     const [plans, setPlans] = useState<DayPlan[]>([]);
     const [ingredientOptions, setIngredientOptions] = useState<IngredientOption[]>([]);
     const [calorieEntries, setCalorieEntries] = useState<CalorieEntry[]>([]);
+    const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
 
     const [loadingData, setLoadingData] = useState(false);
     const [globalError, setGlobalError] = useState<string | null>(null);
@@ -44,16 +56,27 @@ function App() {
     const [loginSubmitting, setLoginSubmitting] = useState(false);
     const [loginError, setLoginError] = useState<string | null>(null);
 
+    const handleLogout = useCallback(() => {
+        api.setToken(null);
+        setUser(null);
+        setDishes([]);
+        setPlans([]);
+        setIngredientOptions([]);
+        setCalorieEntries([]);
+        setPurchases([]);
+    }, []);
+
     const loadAllData = useCallback(async () => {
         setLoadingData(true);
         setGlobalError(null);
 
         try {
-            const [dishesRes, plansRes, ingredientsRes, caloriesRes] = await Promise.all([
+            const [dishesRes, plansRes, ingredientsRes, caloriesRes, purchasesRes] = await Promise.all([
                 api.listDishes(),
                 api.listPlans(),
                 api.listIngredients(),
                 api.listCalorieEntries(),
+                api.listPurchases(),
             ]);
             setDishes(dishesRes);
             setPlans(plansRes);
@@ -63,6 +86,9 @@ function App() {
                 [...caloriesRes].sort((a, b) =>
                     collator.compare(a.ingredientName, b.ingredientName) || a.unit.localeCompare(b.unit),
                 ),
+            );
+            setPurchases(
+                [...purchasesRes].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt)),
             );
         } catch (error) {
             console.error(error);
@@ -78,7 +104,7 @@ function App() {
         } finally {
             setLoadingData(false);
         }
-    }, [t]);
+    }, [t, handleLogout]);
 
     useEffect(() => {
         // Автовідновлення сесії, якщо токен уже є
@@ -138,12 +164,32 @@ function App() {
                 );
             }
         })();
-    }, [activeTab, user, t, refreshCalorieEntries]);
+    }, [activeTab, user, t, refreshCalorieEntries, handleLogout]);
 
     useEffect(() => {
         if (activeTab !== "calories" || !user) return;
         void refreshCalorieEntries();
     }, [activeTab, user, refreshCalorieEntries]);
+
+    const refreshPurchases = useCallback(async () => {
+        try {
+            const data = await api.listPurchases();
+            setPurchases(
+                [...data].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt)),
+            );
+        } catch (error) {
+            console.error(error);
+            if (error instanceof UnauthorizedError) {
+                handleLogout();
+                return;
+            }
+            const msg = getErrorMessage(error);
+            setGlobalError(
+                (t("errors.loadPurchases", {message: msg}) as string) ??
+                `${t("common.unknownError")}: ${msg}`,
+            );
+        }
+    }, [t, handleLogout]);
 
     async function handleLogin(credentials: { login: string; password: string }) {
         setLoginSubmitting(true);
@@ -162,15 +208,6 @@ function App() {
         } finally {
             setLoginSubmitting(false);
         }
-    }
-
-    function handleLogout() {
-        api.setToken(null);
-        setUser(null);
-        setDishes([]);
-        setPlans([]);
-        setIngredientOptions([]);
-        setCalorieEntries([]);
     }
 
     async function handleUpsertDish(dish: Dish): Promise<void> {
@@ -394,6 +431,30 @@ function App() {
         })();
     }
 
+    async function handleCreatePurchase(payload: {
+        ingredientKey: string;
+        amount: number;
+        unit: string;
+        price: number;
+        purchasedAt: string;
+    }): Promise<void> {
+        try {
+            await api.createPurchase(payload);
+            await refreshPurchases();
+        } catch (error) {
+            console.error(error);
+            if (error instanceof UnauthorizedError) {
+                handleLogout();
+                return;
+            }
+            const msg = getErrorMessage(error);
+            setGlobalError(
+                (t("errors.savePurchase", {message: msg}) as string) ??
+                `${t("common.unknownError")}: ${msg}`,
+            );
+        }
+    }
+
     async function fetchShoppingList(start: string, end: string): Promise<ShoppingListResponse> {
         try {
             return await api.shoppingList({start, end});
@@ -468,14 +529,26 @@ function App() {
                                     active={activeTab === "shopping"}
                                     onClick={() => setActiveTab("shopping")}
                                 />
+                                <TabButton
+                                    label={t("tabs.purchases") as string}
+                                    active={activeTab === "purchases"}
+                                    onClick={() => setActiveTab("purchases")}
+                                />
+                                <TabButton
+                                    label={t("tabs.spending") as string}
+                                    active={activeTab === "spending"}
+                                    onClick={() => setActiveTab("spending")}
+                                />
                             </nav>
                             <div className="flex items-center gap-3 self-end lg:self-auto">
                                 <LanguageSwitcher/>
                                 <HeaderMenu
                                     menuLabel={t("app.menuLabel") as string}
+                                    profileLabel={t("menu.profile") as string}
                                     ingredientsLabel={t("menu.ingredients") as string}
                                     caloriesLabel={t("menu.calories") as string}
                                     logoutLabel={t("menu.logout") as string}
+                                    onSelectProfile={() => setActiveTab("profile")}
                                     onSelectIngredients={() => setActiveTab("ingredients")}
                                     onSelectCalories={() => setActiveTab("calories")}
                                     onLogout={handleLogout}
@@ -503,6 +576,7 @@ function App() {
                         <CalendarPage
                             dishes={dishes}
                             plans={plans}
+                            ingredientOptions={ingredientOptions}
                             onUpsertPlan={handleUpsertPlan}
                             onDeletePlan={handleDeletePlan}
                         />
@@ -517,7 +591,10 @@ function App() {
                         />
                     )}
                     {activeTab === "shopping" && (
-                        <ShoppingPage fetchList={fetchShoppingList}/>
+                        <ShoppingPage
+                            fetchList={fetchShoppingList}
+                            ingredientOptions={ingredientOptions}
+                        />
                     )}
                     {activeTab === "ingredients" && (
                         <IngredientsPage
@@ -532,6 +609,28 @@ function App() {
                             entries={calorieEntries}
                             onAddEntry={handleAddCalorieEntry}
                             onUpdateEntry={handleUpdateCalorieEntry}
+                        />
+                    )}
+                    {activeTab === "purchases" && (
+                        <PurchasesPage
+                            ingredients={ingredientOptions}
+                            purchases={purchases}
+                            onCreatePurchase={handleCreatePurchase}
+                            onRefresh={refreshPurchases}
+                        />
+                    )}
+                    {activeTab === "spending" && (
+                        <SpendingPage
+                            ingredients={ingredientOptions}
+                            purchases={purchases}
+                            calorieEntries={calorieEntries}
+                            onRefresh={refreshPurchases}
+                        />
+                    )}
+                    {activeTab === "profile" && (
+                        <ProfilePage
+                            user={user}
+                            onUserChange={(updated) => setUser(updated)}
                         />
                     )}
                 </div>

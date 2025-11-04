@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
+import { getIngredientOptionLabel } from "../../utils/ingredientNames";
 
 interface IngredientsPageProps {
   ingredients: IngredientOption[];
@@ -21,6 +22,10 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
   const collator = useMemo(() => new Intl.Collator(language), [language]);
+  const optionLabel = useCallback(
+    (ingredient: IngredientOption) => getIngredientOptionLabel(ingredient, language),
+    [language],
+  );
 
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
@@ -28,8 +33,11 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
   };
 
   const sortedIngredients = useMemo(
-    () => [...ingredients].sort((a, b) => collator.compare(a.name ?? "", b.name ?? "")),
-    [ingredients, collator],
+    () =>
+      [...ingredients].sort((a, b) =>
+        collator.compare(optionLabel(a) ?? a.name ?? "", optionLabel(b) ?? b.name ?? ""),
+      ),
+    [ingredients, collator, optionLabel],
   );
 
   useEffect(() => {
@@ -172,11 +180,19 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
                     name: ingredient.name,
                     unit: (ingredient.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
                   };
+                  const localizedName = optionLabel(ingredient);
+                  const showSecondary = localizedName && localizedName !== ingredient.name;
                   return (
                     <tr key={ingredient.key} className="border-b last:border-none">
-                      <td className="py-2 pr-4">
+                      <td className="py-2 pr-4 align-top">
+                        <div className="text-xs text-gray-500">
+                          {localizedName}
+                          {showSecondary ? (
+                            <span className="text-gray-400"> · {ingredient.name}</span>
+                          ) : null}
+                        </div>
                         <input
-                          className="w-full rounded-lg border px-2 py-1"
+                          className="mt-1 w-full rounded-lg border px-2 py-1"
                           value={draft.name}
                           onChange={(event) =>
                             setDrafts((prev) => ({

@@ -64,3 +64,13 @@ export interface CalorieEntry {
   unit: string;
   calories: number;
 }
+
+export interface PurchaseEntry {
+  id: string;
+  ingredientKey: string;
+  ingredientName: string;
+  amount: number;
+  unit: string;
+  price: number;
+  purchasedAt: string;
+}
