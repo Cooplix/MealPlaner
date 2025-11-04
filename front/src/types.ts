@@ -12,6 +12,7 @@ export interface Dish {
   name: string;
   meal: MealSlot;
   ingredients: Ingredient[];
+  calories: number;
   notes?: string;
   createdBy?: string | null;
   createdByName?: string | null;
@@ -53,4 +54,13 @@ export interface IngredientOption {
   unit: string;
   translations: Record<string, string>;
   usageCount?: number;
+}
+
+export interface CalorieEntry {
+  id: string;
+  ingredientKey: string;
+  ingredientName: string;
+  amount: number;
+  unit: string;
+  calories: number;
 }

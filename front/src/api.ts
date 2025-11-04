@@ -1,4 +1,12 @@
-import type {DayPlan, Dish, IngredientOption, ShoppingListResponse, TokenResponse, UserProfile,} from "./types";
+import type {
+    CalorieEntry,
+    DayPlan,
+    Dish,
+    IngredientOption,
+    ShoppingListResponse,
+    TokenResponse,
+    UserProfile,
+} from "./types";
 
 const envApiRoot = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const API_ROOT =
@@ -65,7 +73,7 @@ async function request<T>(path: string, init?: RequestInit, includeAuth = true):
 }
 
 function sanitizeDishPayload(dish: Dish): Partial<Dish> {
-    const {id, createdBy, createdByName, ...rest} = dish;
+    const {id, createdBy, createdByName, calories, ...rest} = dish;
     return {...rest, id};
 }
 
@@ -112,7 +120,7 @@ export const api = {
     async updateDish(id: string, dish: Dish): Promise<Dish> {
         const payload = sanitizeDishPayload(dish);
         const saved = await request<Dish>(`/dishes/${encodeURIComponent(id)}`, {
-            method: "PUT",
+            method: "PATCH",
             body: JSON.stringify(payload),
         });
         return saved;
@@ -155,21 +163,55 @@ export const api = {
     async addIngredient(payload: {
         name: string;
         unit: string;
-        translations: Record<string, string>;
+        translations?: Record<string, string>;
     }): Promise<IngredientOption> {
         return request<IngredientOption>("/ingredients", {
             method: "POST",
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                ...payload,
+                translations: payload.translations ?? {},
+            }),
         });
     },
 
     async updateIngredient(key: string, payload: {
         name: string;
         unit: string;
-        translations: Record<string, string>;
+        translations?: Record<string, string>;
     }): Promise<IngredientOption> {
         return request<IngredientOption>(`/ingredients/${encodeURIComponent(key)}`, {
             method: "PUT",
+            body: JSON.stringify({
+                ...payload,
+                translations: payload.translations ?? {},
+            }),
+        });
+    },
+
+    async listCalorieEntries(): Promise<CalorieEntry[]> {
+        return request<CalorieEntry[]>("/calories");
+    },
+
+    async addCalorieEntry(payload: {
+        ingredientKey: string;
+        amount: number;
+        unit: string;
+        calories: number;
+    }): Promise<CalorieEntry> {
+        return request<CalorieEntry>("/calories", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+    },
+
+    async updateCalorieEntry(id: string, payload: {
+        ingredientKey?: string;
+        amount?: number;
+        unit?: string;
+        calories?: number;
+    }): Promise<CalorieEntry> {
+        return request<CalorieEntry>(`/calories/${encodeURIComponent(id)}`, {
+            method: "PATCH",
             body: JSON.stringify(payload),
         });
     },

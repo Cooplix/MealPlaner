@@ -5,6 +5,7 @@ import "./App.css";
 import {api, UnauthorizedError} from "./api";
 import {useTranslation} from "./i18n";
 
+import {HeaderMenu} from "./components/HeaderMenu";
 import {LanguageSwitcher} from "./components/LanguageSwitcher";
 import {TabButton} from "./components/TabButton";
 
@@ -13,10 +14,11 @@ import {CalendarPage} from "./features/calendar/CalendarPage";
 import {DishesPage} from "./features/dishes/DishesPage";
 import {IngredientsPage} from "./features/ingredients/IngredientsPage";
 import {ShoppingPage} from "./features/shopping/ShoppingPage";
+import {CaloriesPage} from "./features/calories/CaloriesPage";
 
-import type {DayPlan, Dish, IngredientOption, ShoppingListResponse, UserProfile,} from "./types";
+import type {CalorieEntry, DayPlan, Dish, IngredientOption, ShoppingListResponse, UserProfile,} from "./types";
 
-type TabId = "calendar" | "dishes" | "shopping" | "ingredients";
+type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -24,7 +26,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 function App() {
-    const {t, languages} = useTranslation();
+    const {t} = useTranslation();
 
     const [user, setUser] = useState<UserProfile | null>(null);
     const [initializing, setInitializing] = useState(true);
@@ -34,6 +36,7 @@ function App() {
     const [dishes, setDishes] = useState<Dish[]>([]);
     const [plans, setPlans] = useState<DayPlan[]>([]);
     const [ingredientOptions, setIngredientOptions] = useState<IngredientOption[]>([]);
+    const [calorieEntries, setCalorieEntries] = useState<CalorieEntry[]>([]);
 
     const [loadingData, setLoadingData] = useState(false);
     const [globalError, setGlobalError] = useState<string | null>(null);
@@ -46,14 +49,21 @@ function App() {
         setGlobalError(null);
 
         try {
-            const [dishesRes, plansRes, ingredientsRes] = await Promise.all([
+            const [dishesRes, plansRes, ingredientsRes, caloriesRes] = await Promise.all([
                 api.listDishes(),
                 api.listPlans(),
                 api.listIngredients(),
+                api.listCalorieEntries(),
             ]);
             setDishes(dishesRes);
             setPlans(plansRes);
             setIngredientOptions(ingredientsRes);
+            const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+            setCalorieEntries(
+                [...caloriesRes].sort((a, b) =>
+                    collator.compare(a.ingredientName, b.ingredientName) || a.unit.localeCompare(b.unit),
+                ),
+            );
         } catch (error) {
             console.error(error);
             if (error instanceof UnauthorizedError) {
@@ -94,6 +104,47 @@ function App() {
         })();
     }, [loadAllData]);
 
+    const refreshCalorieEntries = useCallback(async () => {
+        try {
+            const entries = await api.listCalorieEntries();
+            const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+            setCalorieEntries(
+                [...entries].sort((a, b) =>
+                    collator.compare(a.ingredientName, b.ingredientName) || a.unit.localeCompare(b.unit),
+                ),
+            );
+        } catch (error) {
+            console.error(error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab !== "ingredients" || !user) return;
+        void (async () => {
+            try {
+                const fresh = await api.listIngredients();
+                setIngredientOptions(fresh);
+                await refreshCalorieEntries();
+            } catch (error) {
+                console.error(error);
+                if (error instanceof UnauthorizedError) {
+                    handleLogout();
+                    return;
+                }
+                const msg = getErrorMessage(error);
+                setGlobalError(
+                    (t("errors.saveCalories", {message: msg}) as string) ??
+                    `${t("common.unknownError")}: ${msg}`,
+                );
+            }
+        })();
+    }, [activeTab, user, t, refreshCalorieEntries]);
+
+    useEffect(() => {
+        if (activeTab !== "calories" || !user) return;
+        void refreshCalorieEntries();
+    }, [activeTab, user, refreshCalorieEntries]);
+
     async function handleLogin(credentials: { login: string; password: string }) {
         setLoginSubmitting(true);
         setLoginError(null);
@@ -119,6 +170,7 @@ function App() {
         setDishes([]);
         setPlans([]);
         setIngredientOptions([]);
+        setCalorieEntries([]);
     }
 
     async function handleUpsertDish(dish: Dish): Promise<void> {
@@ -206,26 +258,19 @@ function App() {
     function handleAddIngredient(payload: {
         name: string;
         unit: string;
-        translations: Partial<Record<string, string>>;
     }): void {
         void (async () => {
             try {
-                const translations: Record<string, string> = {};
-                for (const [key, value] of Object.entries(payload.translations)) {
-                    if (value != null && value !== "") {
-                        translations[key] = value;
-                    }
-                }
-
                 const saved = await api.addIngredient({
-                    name: payload.name,
-                    unit: payload.unit,
-                    translations,
+                    name: payload.name.trim(),
+                    unit: payload.unit.trim(),
+                    translations: {},
                 });
 
                 setIngredientOptions((prev) => {
                     if (prev.some((item) => item.key === saved.key)) return prev;
-                    return [...prev, saved];
+                    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+                    return [...prev, saved].sort((a, b) => collator.compare(a.name, b.name));
                 });
             } catch (error) {
                 console.error(error);
@@ -242,31 +287,98 @@ function App() {
         })();
     }
 
-    function handleUpdateIngredientTranslation(payload: {
+    function handleUpdateIngredient(payload: {
         key: string;
-        language: string;
-        value: string;
         name: string;
         unit: string;
     }): void {
         void (async () => {
             try {
+                const trimmedName = payload.name.trim();
+                const trimmedUnit = payload.unit.trim();
                 const existing = ingredientOptions.find((item) => item.key === payload.key);
-                const prevTranslations = existing?.translations ?? {};
-                const nextTranslations = {
-                    ...prevTranslations,
-                    [payload.language]: payload.value,
-                };
 
                 const saved = await api.updateIngredient(payload.key, {
-                    name: payload.name,
-                    unit: payload.unit,
-                    translations: nextTranslations,
+                    name: trimmedName,
+                    unit: trimmedUnit,
+                    translations: existing?.translations ?? {},
                 });
 
-                setIngredientOptions((prev) =>
-                    prev.map((item) => (item.key === saved.key ? saved : item)),
+                setIngredientOptions((prev) => {
+                    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+                    return prev
+                        .map((item) => (item.key === saved.key ? saved : item))
+                        .sort((a, b) => collator.compare(a.name, b.name));
+                });
+                void refreshCalorieEntries();
+            } catch (error) {
+                console.error(error);
+                if (error instanceof UnauthorizedError) {
+                    handleLogout();
+                    return;
+                }
+                const msg = getErrorMessage(error);
+                setGlobalError(
+                    (t("errors.saveIngredient", {message: msg}) as string) ??
+                    `${t("common.unknownError")}: ${msg}`,
                 );
+            }
+        })();
+    }
+
+    function handleAddCalorieEntry(payload: {
+        ingredientKey: string;
+        amount: number;
+        unit: string;
+        calories: number;
+    }): void {
+        void (async () => {
+            try {
+                const saved = await api.addCalorieEntry(payload);
+                setCalorieEntries((prev) => {
+                    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+                    const others = prev.filter((entry) => entry.id !== saved.id);
+                    return [...others, saved].sort((a, b) =>
+                        collator.compare(a.ingredientName, b.ingredientName) || a.unit.localeCompare(b.unit)
+                    );
+                });
+            } catch (error) {
+                console.error(error);
+                if (error instanceof UnauthorizedError) {
+                    handleLogout();
+                    return;
+                }
+                const msg = getErrorMessage(error);
+                setGlobalError(
+                    (t("errors.saveCalories", {message: msg}) as string) ??
+                    `${t("common.unknownError")}: ${msg}`,
+                );
+            }
+        })();
+    }
+
+    function handleUpdateCalorieEntry(payload: {
+        id: string;
+        ingredientKey?: string;
+        amount?: number;
+        unit?: string;
+        calories?: number;
+    }): void {
+        void (async () => {
+            try {
+                const saved = await api.updateCalorieEntry(payload.id, {
+                    ingredientKey: payload.ingredientKey,
+                    amount: payload.amount,
+                    unit: payload.unit,
+                    calories: payload.calories,
+                });
+                setCalorieEntries((prev) => {
+                    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+                    const updated = prev.map((entry) => (entry.id === saved.id ? saved : entry));
+                    return [...updated].sort((a, b) =>
+                        collator.compare(a.ingredientName, b.ingredientName) || a.unit.localeCompare(b.unit)
+                    );
+                });
             } catch (error) {
                 console.error(error);
                 if (error instanceof UnauthorizedError) {
@@ -326,48 +438,50 @@ function App() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <header className="border-b bg-white">
-                <div className="mx-auto max-w-5xl flex items-center justify-between gap-4 px-4 py-3">
-                    <div>
-                        <div className="text-xl font-semibold text-gray-900">
-                            {t("app.title")}
-                            <span className="ml-2 text-sm font-normal text-gray-500">
-                                {user.name}
-                            </span>
+                <div className="mx-auto max-w-5xl px-4 py-4">
+                    <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+                            <div className="min-w-0">
+                                <div className="text-xl font-semibold text-gray-900">
+                                    {t("app.title")}
+                                    <span className="ml-2 text-sm font-normal text-gray-500">
+                                        {user.name}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-gray-400 break-all">{user.login}</div>
+                            </div>
                         </div>
-                        <div className="text-xs text-gray-400">{user.login}</div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <LanguageSwitcher/>
-                        <button
-                            className="text-sm px-3 py-1.5 rounded-lg border"
-                            onClick={handleLogout}
-                        >
-                            {t("auth.logout")}
-                        </button>
-                    </div>
-                </div>
-                <div className="border-t bg-gray-50">
-                    <div className="mx-auto max-w-5xl px-4 py-2 flex gap-2">
-                        <TabButton
-                            label={t("tabs.calendar") as string}
-                            active={activeTab === "calendar"}
-                            onClick={() => setActiveTab("calendar")}
-                        />
-                        <TabButton
-                            label={t("tabs.dishes") as string}
-                            active={activeTab === "dishes"}
-                            onClick={() => setActiveTab("dishes")}
-                        />
-                        <TabButton
-                            label={t("tabs.shopping") as string}
-                            active={activeTab === "shopping"}
-                            onClick={() => setActiveTab("shopping")}
-                        />
-                        <TabButton
-                            label={t("tabs.ingredients") as string}
-                            active={activeTab === "ingredients"}
-                            onClick={() => setActiveTab("ingredients")}
-                        />
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <nav className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+                                <TabButton
+                                    label={t("tabs.calendar") as string}
+                                    active={activeTab === "calendar"}
+                                    onClick={() => setActiveTab("calendar")}
+                                />
+                                <TabButton
+                                    label={t("tabs.dishes") as string}
+                                    active={activeTab === "dishes"}
+                                    onClick={() => setActiveTab("dishes")}
+                                />
+                                <TabButton
+                                    label={t("tabs.shopping") as string}
+                                    active={activeTab === "shopping"}
+                                    onClick={() => setActiveTab("shopping")}
+                                />
+                            </nav>
+                            <div className="flex items-center gap-3 self-end lg:self-auto">
+                                <LanguageSwitcher/>
+                                <HeaderMenu
+                                    menuLabel={t("app.menuLabel") as string}
+                                    ingredientsLabel={t("menu.ingredients") as string}
+                                    caloriesLabel={t("menu.calories") as string}
+                                    logoutLabel={t("menu.logout") as string}
+                                    onSelectIngredients={() => setActiveTab("ingredients")}
+                                    onSelectCalories={() => setActiveTab("calories")}
+                                    onLogout={handleLogout}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -408,9 +522,16 @@ function App() {
                     {activeTab === "ingredients" && (
                         <IngredientsPage
                             ingredients={ingredientOptions}
-                            languages={languages}
                             onAddIngredient={handleAddIngredient}
-                            onUpdateTranslation={handleUpdateIngredientTranslation}
+                            onUpdateIngredient={handleUpdateIngredient}
+                        />
+                    )}
+                    {activeTab === "calories" && (
+                        <CaloriesPage
+                            ingredients={ingredientOptions}
+                            entries={calorieEntries}
+                            onAddEntry={handleAddCalorieEntry}
+                            onUpdateEntry={handleUpdateCalorieEntry}
                         />
                     )}
                 </div>

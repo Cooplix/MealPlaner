@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
+import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { DayPlan, Dish, Ingredient, IngredientOption, MealSlot } from "../../types";
 import { uid } from "../../utils/id";
@@ -19,6 +20,10 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
   const { t } = useTranslation();
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
 
   const usedDishIds = useMemo(
     () =>
@@ -71,6 +76,7 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
               name: "",
               meal: mealFilter === "all" ? "lunch" : mealFilter,
               ingredients: [],
+              calories: 0,
             })
           }
         >
@@ -85,7 +91,7 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <span>{t("dishes.filterLabel")}:</span>
           <select
-            className="px-2 py-1.5 rounded-lg border"
+            className="rounded-xl border px-3 py-2"
             value={mealFilter}
             onChange={(event) => setMealFilter(event.target.value as MealSlot | "all")}
           >
@@ -119,7 +125,10 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
                   {dish.name || t("dishes.untitled")}
                 </h3>
                 <p className="text-xs text-gray-500">
-                    {t(MEAL_LABEL_KEYS[dish.meal])}
+                  {t(MEAL_LABEL_KEYS[dish.meal])}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t("dishes.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
                 </p>
                   {(dish.createdByName || dish.createdBy) && (
                       <p className="text-xs text-gray-400">
@@ -129,13 +138,13 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
               </div>
               <div className="flex gap-2">
                 <button
-                  className="text-sm px-2 py-1 rounded-lg border"
+                  className="rounded-xl border px-3 py-2 text-sm"
                   onClick={() => setEditing(dish)}
                 >
                   {t("dishes.edit")}
                 </button>
                 <button
-                  className="text-sm px-2 py-1 rounded-lg border"
+                  className="rounded-xl border px-3 py-2 text-sm"
                   onClick={() => removeDish(dish.id)}
                   disabled={busyId === dish.id}
                 >
@@ -146,13 +155,13 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
             <ul className="mt-3 text-sm list-disc list-inside text-gray-700">
               {dish.ingredients.map((ingredient) => (
                 <li key={ingredient.id}>
-                  {ingredient.name} — {ingredient.qty} {ingredient.unit}
+                  {ingredient.name} — {ingredient.qty} {formatUnit(ingredient.unit)}
                 </li>
               ))}
             </ul>
             {dish.notes && <p className="mt-2 text-sm text-gray-500">{dish.notes}</p>}
             {usedDishIds.has(dish.id) && (
-              <div className="mt-3 inline-block text-xs px-2 py-1 rounded bg-gray-100">
+              <div className="mt-3 inline-block text-xs px-3 py-1 rounded bg-gray-100">
                 {t("dishes.inCalendar")}
               </div>
             )}
@@ -173,9 +182,19 @@ interface DishEditorProps {
 }
 
 function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishEditorProps) {
-  const [state, setState] = useState<Dish>({ ...dish });
+  const [state, setState] = useState<Dish>(() => ({
+    ...dish,
+    calories: dish.calories ?? 0,
+    ingredients: dish.ingredients.map((ingredient) => ({
+      ...ingredient,
+    })),
+  }));
   const [existingChoice, setExistingChoice] = useState<string>("");
   const { t, language } = useTranslation();
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
 
   const availableExisting = useMemo(() => {
     const usedKeys = new Set(
@@ -189,7 +208,10 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
   function addIngredient() {
     setState((prev) => ({
       ...prev,
-      ingredients: [...prev.ingredients, { id: uid("ing"), name: "", unit: "g", qty: 100 }],
+      ingredients: [
+        ...prev.ingredients,
+        { id: uid("ing"), name: "", unit: MEASUREMENT_UNITS[0], qty: 100 },
+      ],
     }));
   }
 
@@ -201,7 +223,12 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
       ...prev,
       ingredients: [
         ...prev.ingredients,
-        { id: uid("ing"), name: option.name, unit: option.unit, qty: 1 },
+        {
+          id: uid("ing"),
+          name: option.name,
+          unit: option.unit,
+          qty: 1,
+        },
       ],
     }));
     setExistingChoice("");
@@ -224,7 +251,11 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
         if (ingredient.id !== id) return ingredient;
         const match = findMatchingOption(value);
         if (match) {
-          return { ...ingredient, name: match.name, unit: match.unit };
+          return {
+            ...ingredient,
+            name: match.name,
+            unit: match.unit,
+          };
         }
         return { ...ingredient, name: value };
       }),
@@ -269,7 +300,17 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
       const key = `${ingredient.name.trim().toLowerCase()}__${ingredient.unit.trim().toLowerCase()}`;
       if (ingredient.name.trim() && ingredient.unit.trim() && !seen.has(key)) {
         seen.add(key);
-        result.push({ ...ingredient, name: ingredient.name.trim(), unit: ingredient.unit.trim() });
+        const qty = Number.isFinite(ingredient.qty) ? ingredient.qty : 0;
+        const normalizedUnit = (ingredient.unit || "").trim();
+        const unit = MEASUREMENT_UNITS.includes(normalizedUnit as MeasurementUnit)
+          ? (normalizedUnit as MeasurementUnit)
+          : MEASUREMENT_UNITS[0];
+        result.push({
+          ...ingredient,
+          name: ingredient.name.trim(),
+          unit,
+          qty,
+        });
       }
     });
     return result;
@@ -319,15 +360,17 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
       </div>
 
       <div className="mt-4">
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <h4 className="font-semibold">{t("dishes.editor.ingredientsTitle")}</h4>
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="text-sm px-2 py-1 rounded-lg border" onClick={addIngredient}>
-                {t("dishes.editor.addNew")}
-              </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="font-semibold text-gray-900">{t("dishes.editor.ingredientsTitle")}</h4>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="text-sm px-3 py-1 rounded-lg border" onClick={addIngredient}>
+              {t("dishes.editor.addNew")}
+            </button>
             <div className="flex items-center gap-2">
               <select
-                className="text-sm px-2 py-1.5 rounded-lg border"
+                className="rounded-xl border px-3 py-2 text-sm"
                 value={existingChoice}
                 onChange={(event) => setExistingChoice(event.target.value)}
                 disabled={!availableExisting.length}
@@ -335,7 +378,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
                 <option value="">{t("dishes.editor.selectExisting")}</option>
                 {availableExisting.map((option) => (
                   <option key={option.key} value={option.key}>
-                    {option.name} · {option.unit}
+                    {option.name} · {formatUnit(option.unit)}
                     {option.translations[language]
                       ? ` — ${option.translations[language]}`
                       : ""}
@@ -343,7 +386,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
                 ))}
               </select>
               <button
-                className="text-sm px-2 py-1 rounded-lg border"
+                className="text-sm px-3 py-1 rounded-lg border"
                 onClick={addExistingIngredient}
                 disabled={!existingChoice}
               >
@@ -354,9 +397,12 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
         </div>
         <div className="mt-2 space-y-2">
           {state.ingredients.map((ingredient) => (
-            <div key={ingredient.id} className="grid grid-cols-12 gap-2 items-center">
+            <div
+              key={ingredient.id}
+              className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-center"
+            >
               <input
-                className="col-span-5 px-3 py-2 rounded-xl border"
+                className="rounded-xl border px-3 py-2 sm:col-span-4"
                 placeholder={t("dishes.editor.ingredientNamePlaceholder")}
                 value={ingredient.name}
                 onChange={(event) => handleNameChange(ingredient.id, event.target.value)}
@@ -365,7 +411,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
               <datalist id={`ingredient-suggestions-${ingredient.id}`}>
                 {suggestionList(ingredient.name).map((option) => (
                   <option key={option.key} value={option.name}>
-                    {option.name} · {option.unit}
+                    {option.name} · {formatUnit(option.unit)}
                     {option.translations[language]
                       ? ` — ${option.translations[language]}`
                       : ""}
@@ -374,25 +420,30 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
               </datalist>
               <input
                 type="number"
-                className="col-span-3 px-3 py-2 rounded-xl border"
+                className="rounded-xl border px-3 py-2 sm:col-span-2"
                 placeholder={t("dishes.editor.ingredientQtyPlaceholder")}
                 value={Number.isFinite(ingredient.qty) ? ingredient.qty : ""}
                 onChange={(event) =>
                   updateIngredient(ingredient.id, {
-                    qty: parseFloat(event.target.value || "0"),
+                    qty: Number.parseFloat(event.target.value || "0"),
                   })
                 }
               />
-              <input
-                className="col-span-2 px-3 py-2 rounded-xl border"
-                placeholder={t("dishes.editor.ingredientUnitPlaceholder")}
+              <select
+                className="rounded-xl border px-3 py-2 sm:col-span-3"
                 value={ingredient.unit}
                 onChange={(event) =>
-                  updateIngredient(ingredient.id, { unit: event.target.value })
+                  updateIngredient(ingredient.id, { unit: event.target.value as MeasurementUnit })
                 }
-              />
+              >
+                {MEASUREMENT_UNITS.map((value) => (
+                  <option key={value} value={value}>
+                    {formatUnit(value)}
+                  </option>
+                ))}
+              </select>
               <button
-                className="col-span-2 px-3 py-2 rounded-xl border"
+                className="w-full rounded-xl border px-3 py-2 sm:w-auto sm:col-span-3 lg:col-span-2 whitespace-nowrap"
                 onClick={() => removeIngredient(ingredient.id)}
               >
                 {t("dishes.delete")}

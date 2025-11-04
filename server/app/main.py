@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import get_database
 from .migrations import run_migrations
-from .routes import auth, dishes, ingredients, plans, shopping, users
+from .routes import auth, calories, dishes, ingredients, plans, shopping, users
 
 app = FastAPI(title="MealPlanner API")
 
@@ -21,6 +21,7 @@ app.include_router(dishes.router)
 app.include_router(plans.router)
 app.include_router(shopping.router)
 app.include_router(ingredients.router)
+app.include_router(calories.router)
 
 
 @app.get("/api/health")

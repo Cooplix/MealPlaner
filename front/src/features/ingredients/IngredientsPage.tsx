@@ -1,87 +1,105 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
-import type { Language } from "../../i18n/types";
 import type { IngredientOption } from "../../types";
 
 interface IngredientsPageProps {
   ingredients: IngredientOption[];
-  languages: Array<{ code: Language; label: string }>;
-  onAddIngredient: (payload: {
-    name: string;
-    unit: string;
-    translations: Partial<Record<Language, string>>;
-  }) => void;
-  onUpdateTranslation: (payload: {
-    key: string;
-    language: Language;
-    value: string;
-    name: string;
-    unit: string;
-  }) => void;
+  onAddIngredient: (payload: { name: string; unit: MeasurementUnit }) => void;
+  onUpdateIngredient: (payload: { key: string; name: string; unit: MeasurementUnit }) => void;
 }
 
-export function IngredientsPage({
-  ingredients,
-  languages,
-  onAddIngredient,
-  onUpdateTranslation,
-}: IngredientsPageProps) {
+type Draft = { name: string; unit: MeasurementUnit };
+
+export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredient }: IngredientsPageProps) {
   const { t, language } = useTranslation();
   const [name, setName] = useState("");
-  const [unit, setUnit] = useState("");
-  const [translations, setTranslations] = useState<Record<Language, string>>(() =>
-    Object.fromEntries(languages.map((lang) => [lang.code, ""])) as Record<Language, string>,
-  );
+  const [unit, setUnit] = useState<MeasurementUnit>(MEASUREMENT_UNITS[0]);
   const [error, setError] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
   const collator = useMemo(() => new Intl.Collator(language), [language]);
 
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
+
   const sortedIngredients = useMemo(
-    () =>
-      [...ingredients].sort((a, b) => {
-        const labelA = a.translations[language] ?? a.name;
-        const labelB = b.translations[language] ?? b.name;
-        return collator.compare(labelA, labelB);
-      }),
-    [ingredients, collator, language],
+    () => [...ingredients].sort((a, b) => collator.compare(a.name ?? "", b.name ?? "")),
+    [ingredients, collator],
   );
+
+  useEffect(() => {
+    const next: Record<string, Draft> = {};
+    ingredients.forEach((ingredient) => {
+      const unit = MEASUREMENT_UNITS.includes(ingredient.unit as MeasurementUnit)
+        ? (ingredient.unit as MeasurementUnit)
+        : MEASUREMENT_UNITS[0];
+      next[ingredient.key] = {
+        name: ingredient.name,
+        unit,
+      };
+    });
+    setDrafts(next);
+  }, [ingredients]);
 
   function resetForm() {
     setName("");
-    setUnit("");
-    setTranslations(Object.fromEntries(languages.map((lang) => [lang.code, ""])) as Record<
-      Language,
-      string
-    >);
+    setUnit(MEASUREMENT_UNITS[0]);
     setError(null);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedName = name.trim();
-    const trimmedUnit = unit.trim();
-    if (!trimmedName || !trimmedUnit) {
+    if (!trimmedName) {
       setError(t("dishes.editor.ingredientEmpty"));
       return;
     }
-    const payload: Partial<Record<Language, string>> = {};
-    for (const lang of languages) {
-      const value = translations[lang.code]?.trim();
-      if (value) {
-        payload[lang.code] = value;
-      }
-    }
-    onAddIngredient({ name: trimmedName, unit: trimmedUnit, translations: payload });
+    onAddIngredient({ name: trimmedName, unit });
     resetForm();
+  }
+
+  function resetDraftFromIngredient(ingredient: IngredientOption) {
+    setDrafts((prev) => ({
+      ...prev,
+      [ingredient.key]: {
+        name: ingredient.name,
+        unit: (ingredient.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+      },
+    }));
+  }
+
+  function commitDraft(ingredient: IngredientOption) {
+    const draft = drafts[ingredient.key];
+    if (!draft) return;
+
+    const nextName = draft.name.trim() || ingredient.name;
+    const nextUnit = draft.unit;
+
+    if (nextName === ingredient.name && nextUnit === ingredient.unit) {
+      resetDraftFromIngredient(ingredient);
+      return;
+    }
+
+    onUpdateIngredient({ key: ingredient.key, name: nextName, unit: nextUnit });
+    setDrafts((prev) => ({
+      ...prev,
+      [ingredient.key]: {
+        name: nextName,
+        unit: nextUnit,
+      },
+    }));
   }
 
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border bg-white p-4 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">{t("ingredients.addHeading")}</h2>
-        <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <form className="mt-4 grid gap-4 md:grid-cols-3" onSubmit={handleSubmit}>
           <div className="space-y-1">
             <label className="block text-sm text-gray-600" htmlFor="ingredient-name">
               {t("ingredients.baseName")}
@@ -98,54 +116,39 @@ export function IngredientsPage({
             <label className="block text-sm text-gray-600" htmlFor="ingredient-unit">
               {t("ingredients.unit")}
             </label>
-            <input
+            <select
               id="ingredient-unit"
               className="w-full rounded-xl border px-3 py-2"
               value={unit}
-              onChange={(event) => setUnit(event.target.value)}
-              placeholder={t("dishes.editor.ingredientUnitPlaceholder")}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <h3 className="text-sm font-medium text-gray-600">{t("ingredients.translationsHeading")}</h3>
-            <div className="mt-2 grid gap-3 md:grid-cols-3">
-              {languages.map((lang) => (
-                <label key={lang.code} className="text-sm text-gray-600 space-y-1">
-                  <span>{lang.label}</span>
-                  <input
-                    className="w-full rounded-xl border px-3 py-2"
-                    value={translations[lang.code] ?? ""}
-                    onChange={(event) =>
-                      setTranslations((prev) => ({
-                        ...prev,
-                        [lang.code]: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
+              onChange={(event) => setUnit(event.target.value as MeasurementUnit)}
+            >
+              {MEASUREMENT_UNITS.map((value) => (
+                <option key={value} value={value}>
+                  {formatUnit(value)}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
-          {error && (
-            <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <div className="md:col-span-2 flex gap-3">
+          <div className="md:col-span-1 flex flex-wrap items-end gap-3">
             <button
               type="submit"
-              className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white"
+              className="rounded-xl bg-gray-900 px-3 py-2 text-sm font-medium text-white sm:w-auto"
             >
               {t("ingredients.addButton")}
             </button>
             <button
               type="button"
-              className="rounded-xl border px-4 py-2 text-sm font-medium"
+              className="rounded-xl border px-3 py-2 text-sm font-medium sm:w-auto"
               onClick={resetForm}
             >
               {t("dishes.actions.cancel")}
             </button>
           </div>
+          {error && (
+            <div className="md:col-span-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </form>
       </section>
 
@@ -161,38 +164,67 @@ export function IngredientsPage({
                   <th className="py-2 pr-4">{t("ingredients.tableHeaders.ingredient")}</th>
                   <th className="py-2 pr-4">{t("ingredients.tableHeaders.unit")}</th>
                   <th className="py-2 pr-4">{t("ingredients.tableHeaders.usage")}</th>
-                  {languages.map((lang) => (
-                    <th key={lang.code} className="py-2 pr-4">
-                      {lang.label}
-                    </th>
-                  ))}
                 </tr>
               </thead>
               <tbody>
-                {sortedIngredients.map((ingredient) => (
-                  <tr key={ingredient.key} className="border-b last:border-none">
-                    <td className="py-2 pr-4">{ingredient.name}</td>
-                    <td className="py-2 pr-4">{ingredient.unit}</td>
-                    <td className="py-2 pr-4">{ingredient.usageCount ?? 0}</td>
-                    {languages.map((lang) => (
-                      <td key={lang.code} className="py-2 pr-4">
+                {sortedIngredients.map((ingredient) => {
+                  const draft = drafts[ingredient.key] ?? {
+                    name: ingredient.name,
+                    unit: (ingredient.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+                  };
+                  return (
+                    <tr key={ingredient.key} className="border-b last:border-none">
+                      <td className="py-2 pr-4">
                         <input
                           className="w-full rounded-lg border px-2 py-1"
-                          value={ingredient.translations[lang.code] ?? ""}
+                          value={draft.name}
                           onChange={(event) =>
-                            onUpdateTranslation({
-                              key: ingredient.key,
-                              language: lang.code,
-                              value: event.target.value,
-                              name: ingredient.name,
-                              unit: ingredient.unit,
-                            })
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [ingredient.key]: {
+                                ...draft,
+                                name: event.target.value,
+                              },
+                            }))
                           }
+                          onBlur={() => commitDraft(ingredient)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitDraft(ingredient);
+                            } else if (event.key === "Escape") {
+                              event.preventDefault();
+                              resetDraftFromIngredient(ingredient);
+                            }
+                          }}
                         />
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      <td className="py-2 pr-4">
+                        <select
+                          className="w-full rounded-lg border px-2 py-1"
+                          value={draft.unit}
+                          onChange={(event) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [ingredient.key]: {
+                                ...draft,
+                                unit: event.target.value as MeasurementUnit,
+                              },
+                            }))
+                          }
+                          onBlur={() => commitDraft(ingredient)}
+                        >
+                          {MEASUREMENT_UNITS.map((value) => (
+                            <option key={value} value={value}>
+                              {formatUnit(value)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2 pr-4">{ingredient.usageCount ?? 0}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

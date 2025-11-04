@@ -10,6 +10,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       footer:
         "Data is stored in MongoDB. Recommendations pick dishes with the largest ingredient overlap this week.",
       language: "Language",
+      menuLabel: "Menu",
     },
     common: {
       unknownError: "unknown error",
@@ -19,6 +20,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       calendar: "Calendar",
       shopping: "Shopping List",
       ingredients: "Ingredients",
+      calories: "Calories",
     },
     auth: {
       loginTitle: "Sign in",
@@ -28,6 +30,24 @@ export const translations: Record<Language, Record<string, unknown>> = {
       error: "Login failed. Check your credentials.",
       logout: "Log out",
     },
+    menu: {
+      ingredients: "Ingredients",
+      calories: "Calorie presets",
+      logout: "Log out",
+    },
+    units: {
+      g: "g",
+      kg: "kg",
+      mg: "mg",
+      lb: "lb",
+      oz: "oz",
+      ml: "ml",
+      l: "l",
+      pcs: "pcs",
+      tbsp: "tbsp",
+      tsp: "tsp",
+      cup: "cup",
+    },
     errors: {
       loadData: "Failed to load data: {{message}}",
       saveDish: "Failed to save dish: {{message}}",
@@ -35,6 +55,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       savePlan: "Failed to save plan: {{message}}",
       deletePlan: "Failed to delete day: {{message}}",
       shopping: "Failed to build list: {{message}}",
+      saveCalories: "Failed to save calorie entry: {{message}}",
     },
     dishes: {
       add: "Add dish",
@@ -47,6 +68,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       untitled: "(untitled)",
       inCalendar: "In calendar",
       empty: "No dishes yet. Use the button above to add the first one.",
+      caloriesLabel: "≈ {{calories}} kcal",
       editor: {
         nameLabel: "Name",
         mealLabel: "Meal slot",
@@ -57,7 +79,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         selectExisting: "Choose existing ingredient",
         ingredientNamePlaceholder: "Name (rice, chicken…)",
         ingredientQtyPlaceholder: "Qty",
-        ingredientUnitPlaceholder: "Unit (g, pcs…)",
+        ingredientUnitPlaceholder: "Unit",
         ingredientEmpty: "Add at least one ingredient.",
       },
       actions: {
@@ -82,6 +104,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       recommendationsEmpty: "No suggestions — add more dishes or plan at least one day.",
       add: "Add",
       ingredientsLabel: "Ingredients:",
+      caloriesLabel: "{{calories}} kcal",
       remove: "Remove",
       matches: "matches: {{count}}",
       selectDishPlaceholder: "— Select a dish —",
@@ -104,17 +127,37 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     ingredients: {
       title: "Ingredient library",
-      addHeading: "Add ingredient translation",
+      addHeading: "Add ingredient",
       baseName: "Base name",
       unit: "Unit",
       addButton: "Add ingredient",
-      translationsHeading: "Translations",
       tableHeaders: {
         ingredient: "Ingredient",
         unit: "Unit",
         usage: "Usage",
       },
       empty: "No ingredients found.",
+    },
+    calories: {
+      title: "Calorie presets",
+      addHeading: "Add calorie entry",
+      ingredient: "Ingredient",
+      amount: "Amount",
+      unit: "Unit",
+      calories: "Calories (kcal)",
+      addButton: "Add",
+      empty: "No calorie presets yet.",
+      validation: {
+        selectIngredient: "Select an ingredient first.",
+        amount: "Amount must be greater than zero.",
+        calories: "Calories must be zero or greater.",
+      },
+      tableHeaders: {
+        ingredient: "Ingredient",
+        amount: "Amount",
+        unit: "Unit",
+        calories: "Calories (kcal)",
+      },
     },
   },
   uk: {
@@ -124,6 +167,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       footer:
         "Дані зберігаються у MongoDB. Рекомендації обирають страви з найбільшим перетином інгредієнтів у поточному тижні.",
       language: "Мова",
+      menuLabel: "Меню",
     },
     common: {
       unknownError: "невідома помилка",
@@ -133,6 +177,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       calendar: "Календар",
       shopping: "Список покупок",
       ingredients: "Інгредієнти",
+      calories: "Калорійність",
     },
     auth: {
       loginTitle: "Увійти",
@@ -142,6 +187,24 @@ export const translations: Record<Language, Record<string, unknown>> = {
       error: "Не вдалося увійти. Перевір логін та пароль.",
       logout: "Вийти",
     },
+    menu: {
+      ingredients: "Інгредієнти",
+      calories: "Калорійність",
+      logout: "Вийти",
+    },
+    units: {
+      g: "г",
+      kg: "кг",
+      mg: "мг",
+      lb: "фунт",
+      oz: "унція",
+      ml: "мл",
+      l: "л",
+      pcs: "шт",
+      tbsp: "ст. л.",
+      tsp: "ч. л.",
+      cup: "склянка",
+    },
     errors: {
       loadData: "Не вдалося завантажити дані: {{message}}",
       saveDish: "Не вдалося зберегти страву: {{message}}",
@@ -149,6 +212,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       savePlan: "Не вдалося зберегти план: {{message}}",
       deletePlan: "Не вдалося видалити день: {{message}}",
       shopping: "Не вдалося побудувати список: {{message}}",
+      saveCalories: "Не вдалося зберегти калорійність: {{message}}",
     },
     dishes: {
       add: "Додати страву",
@@ -161,6 +225,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       untitled: "(без назви)",
       inCalendar: "В календарі",
       empty: "Немає страв. Додай першу страву кнопкою вище.",
+      caloriesLabel: "≈ {{calories}} ккал",
       editor: {
         nameLabel: "Назва",
         mealLabel: "Пора дня",
@@ -171,7 +236,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         selectExisting: "Обрати з наявних інгредієнтів",
         ingredientNamePlaceholder: "Назва (рис, курка…)",
         ingredientQtyPlaceholder: "К-сть",
-        ingredientUnitPlaceholder: "Одиниця (g, pcs…)",
+        ingredientUnitPlaceholder: "Одиниця",
         ingredientEmpty: "Додай хоча б один інгредієнт.",
       },
       actions: {
@@ -196,6 +261,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       recommendationsEmpty: "Немає пропозицій — додай кілька страв або заплануй хоча б один день.",
       add: "Додати",
       ingredientsLabel: "Інгредієнти:",
+      caloriesLabel: "{{calories}} ккал",
       remove: "Прибрати",
       matches: "збігів: {{count}}",
       selectDishPlaceholder: "— Обрати страву —",
@@ -218,17 +284,37 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     ingredients: {
       title: "Бібліотека інгредієнтів",
-      addHeading: "Додати переклад інгредієнта",
+      addHeading: "Додати інгредієнт",
       baseName: "Назва",
       unit: "Одиниця",
       addButton: "Додати інгредієнт",
-      translationsHeading: "Переклади",
       tableHeaders: {
         ingredient: "Інгредієнт",
         unit: "Одиниця",
         usage: "Використання",
       },
       empty: "Немає інгредієнтів.",
+    },
+    calories: {
+      title: "Калорійність",
+      addHeading: "Додати запис калорійності",
+      ingredient: "Інгредієнт",
+      amount: "Кількість",
+      unit: "Одиниця",
+      calories: "Калорійність (ккал)",
+      addButton: "Додати",
+      empty: "Записів поки що немає.",
+      validation: {
+        selectIngredient: "Оберіть інгредієнт.",
+        amount: "Кількість має бути більшою за нуль.",
+        calories: "Калорійність має бути невід’ємною.",
+      },
+      tableHeaders: {
+        ingredient: "Інгредієнт",
+        amount: "Кількість",
+        unit: "Одиниця",
+        calories: "Ккал",
+      },
     },
   },
   pl: {
@@ -238,6 +324,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       footer:
         "Dane są przechowywane w MongoDB. Rekomendacje wybierają potrawy z największą liczbą wspólnych składników w tym tygodniu.",
       language: "Język",
+      menuLabel: "Menu",
     },
     common: {
       unknownError: "nieznany błąd",
@@ -247,6 +334,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       calendar: "Kalendarz",
       shopping: "Lista zakupów",
       ingredients: "Składniki",
+      calories: "Kaloryczność",
     },
     auth: {
       loginTitle: "Zaloguj się",
@@ -256,6 +344,24 @@ export const translations: Record<Language, Record<string, unknown>> = {
       error: "Logowanie nie powiodło się. Sprawdź dane.",
       logout: "Wyloguj",
     },
+    menu: {
+      ingredients: "Składniki",
+      calories: "Kaloryczność",
+      logout: "Wyloguj",
+    },
+    units: {
+      g: "g",
+      kg: "kg",
+      mg: "mg",
+      lb: "funt",
+      oz: "uncja",
+      ml: "ml",
+      l: "l",
+      pcs: "szt.",
+      tbsp: "łyżka",
+      tsp: "łyżeczka",
+      cup: "kubek",
+    },
     errors: {
       loadData: "Nie udało się wczytać danych: {{message}}",
       saveDish: "Nie udało się zapisać dania: {{message}}",
@@ -263,6 +369,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       savePlan: "Nie udało się zapisać planu: {{message}}",
       deletePlan: "Nie udało się usunąć dnia: {{message}}",
       shopping: "Nie udało się utworzyć listy: {{message}}",
+      saveCalories: "Nie udało się zapisać wpisu kaloryczności: {{message}}",
     },
     dishes: {
       add: "Dodaj danie",
@@ -275,6 +382,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       untitled: "(bez nazwy)",
       inCalendar: "W kalendarzu",
       empty: "Brak dań. Użyj przycisku powyżej, aby dodać pierwsze.",
+      caloriesLabel: "≈ {{calories}} kcal",
       editor: {
         nameLabel: "Nazwa",
         mealLabel: "Pora dnia",
@@ -285,7 +393,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         selectExisting: "Wybierz istniejący składnik",
         ingredientNamePlaceholder: "Nazwa (ryż, kurczak…)",
         ingredientQtyPlaceholder: "Ilość",
-        ingredientUnitPlaceholder: "Jednostka (g, szt…)",
+        ingredientUnitPlaceholder: "Jednostka",
         ingredientEmpty: "Dodaj co najmniej jeden składnik.",
       },
       actions: {
@@ -310,6 +418,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
       recommendationsEmpty: "Brak propozycji — dodaj więcej dań lub zaplanuj przynajmniej jeden dzień.",
       add: "Dodaj",
       ingredientsLabel: "Składniki:",
+      caloriesLabel: "{{calories}} kcal",
       remove: "Usuń",
       matches: "dopasowań: {{count}}",
       selectDishPlaceholder: "— Wybierz danie —",
@@ -332,17 +441,37 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     ingredients: {
       title: "Biblioteka składników",
-      addHeading: "Dodaj tłumaczenie składnika",
+      addHeading: "Dodaj składnik",
       baseName: "Nazwa",
       unit: "Jednostka",
       addButton: "Dodaj składnik",
-      translationsHeading: "Tłumaczenia",
       tableHeaders: {
         ingredient: "Składnik",
         unit: "Jednostka",
         usage: "Użycie",
       },
       empty: "Brak składników.",
+    },
+    calories: {
+      title: "Kaloryczność",
+      addHeading: "Dodaj wpis kaloryczności",
+      ingredient: "Składnik",
+      amount: "Ilość",
+      unit: "Jednostka",
+      calories: "Kalorie (kcal)",
+      addButton: "Dodaj",
+      empty: "Brak wpisów kaloryczności.",
+      validation: {
+        selectIngredient: "Wybierz składnik.",
+        amount: "Ilość musi być większa od zera.",
+        calories: "Kalorie muszą być nieujemne.",
+      },
+      tableHeaders: {
+        ingredient: "Składnik",
+        amount: "Ilość",
+        unit: "Jednostka",
+        calories: "Kalorie (kcal)",
+      },
     },
   },
 };

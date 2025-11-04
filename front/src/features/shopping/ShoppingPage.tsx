@@ -2,20 +2,30 @@ import { useEffect, useState } from "react";
 
 import { useTranslation } from "../../i18n";
 import type { ShoppingListItem, ShoppingListResponse } from "../../types";
-import { todayISO } from "../../utils/dates";
+import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
 
 interface ShoppingPageProps {
   fetchList: (start: string, end: string) => Promise<ShoppingListResponse>;
 }
 
 export function ShoppingPage({ fetchList }: ShoppingPageProps) {
-  const [rangeStart, setRangeStart] = useState<string>(() => todayISO());
-  const [rangeEnd, setRangeEnd] = useState<string>(() => todayISO());
+  const [rangeStart, setRangeStart] = useState<string>(() => {
+    const monday = startOfWeek(new Date());
+    return toDateISO(monday);
+  });
+  const [rangeEnd, setRangeEnd] = useState<string>(() => {
+    const monday = startOfWeek(new Date());
+    return toDateISO(addDays(monday, 6));
+  });
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const { t } = useTranslation();
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +135,7 @@ export function ShoppingPage({ fetchList }: ShoppingPageProps) {
                   </td>
                   <td className="py-2">{item.name}</td>
                   <td className="py-2">{Number(item.qty.toFixed(2))}</td>
-                  <td className="py-2">{item.unit}</td>
+                  <td className="py-2">{formatUnit(item.unit)}</td>
                 </tr>
               ))}
             </tbody>
@@ -163,7 +173,7 @@ function ExportButton({ items, disabled }: ExportButtonProps) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `shopping_list_${todayISO()}.txt`;
+    anchor.download = `shopping_list_${toDateISO(new Date())}.txt`;
     anchor.click();
     URL.revokeObjectURL(url);
   }

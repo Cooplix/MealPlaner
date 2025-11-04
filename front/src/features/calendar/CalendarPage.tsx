@@ -21,6 +21,10 @@ export function CalendarPage({
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const { t, language } = useTranslation();
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
 
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
 
@@ -181,16 +185,19 @@ export function CalendarPage({
           <div className="rounded-2xl border bg-white p-4 shadow-sm sticky top-20">
             <h3 className="font-semibold text-gray-900">{t("calendar.recommendationsTitle")}</h3>
             <p className="text-sm text-gray-500">{t("calendar.recommendationsHint")}</p>
-            <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
-              {recommendations.map(({ dish, overlap }) => (
-                <div key={dish.id} className="p-2 rounded-xl border">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">{dish.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {t(MEAL_LABEL_KEYS[dish.meal])} · {t("calendar.matches", { count: overlap })}
-                      </div>
-                    </div>
+      <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
+        {recommendations.map(({ dish, overlap }) => (
+          <div key={dish.id} className="p-2 rounded-xl border">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-medium text-sm text-gray-900">{dish.name}</div>
+                <div className="text-xs text-gray-500">
+                  {t(MEAL_LABEL_KEYS[dish.meal])} · {t("calendar.matches", { count: overlap })}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {t("calendar.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
+                </div>
+              </div>
                     <button
                       className="text-xs px-2 py-1 rounded-lg border"
                       onClick={() => {
@@ -214,11 +221,11 @@ export function CalendarPage({
                       {t("calendar.add")}
                     </button>
                   </div>
-                  <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
+          <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
                     {dish.ingredients.slice(0, 4).map((ingredient) => (
                       <li key={ingredient.id}>
                         {ingredient.name} ({ingredient.qty}
-                        {ingredient.unit})
+                        {formatUnit(ingredient.unit)})
                       </li>
                     ))}
                     {dish.ingredients.length > 4 && <li>…</li>}
@@ -248,6 +255,10 @@ interface MealPickerProps {
 function MealPicker({ slot, dishes, value, onChange, busy, allDishes }: MealPickerProps) {
   const selected = allDishes.find((dish) => dish.id === value) ?? undefined;
   const { t } = useTranslation();
+  const formatUnit = (unit: string): string => {
+    const label = t(`units.${unit}`);
+    return label.startsWith("units.") ? unit : label;
+  };
   const options = useMemo(() => {
     if (selected && !dishes.some((dish) => dish.id === selected.id)) {
       return [...dishes, selected];
@@ -273,12 +284,15 @@ function MealPicker({ slot, dishes, value, onChange, busy, allDishes }: MealPick
       </select>
       {selected && (
         <div className="mt-2 text-xs text-gray-600">
+          <div>
+            {t("calendar.caloriesLabel", { calories: Math.round(selected.calories ?? 0) })}
+          </div>
           <div className="font-medium">{t("calendar.ingredientsLabel")}</div>
           <ul className="list-disc list-inside">
             {selected.ingredients.map((ingredient) => (
               <li key={ingredient.id}>
                 {ingredient.name} — {ingredient.qty}
-                {ingredient.unit}
+                {formatUnit(ingredient.unit)}
               </li>
             ))}
           </ul>

@@ -1,15 +1,20 @@
 from datetime import date
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 MealSlot = Literal["breakfast", "lunch", "dinner", "snack"]
+MeasurementUnit = Literal[
+    "g", "kg", "mg", "lb", "oz", "ml", "l", "pcs", "tbsp", "tsp", "cup"
+]
 
 # --- dishes & ingredients --------------------------------------------------
 class Ingredient(BaseModel):
     name: str
-    unit: str = Field(..., description="Measurement unit, e.g. g, pcs, ml")
+    unit: str
     qty: float = Field(..., ge=0, description="Quantity per serving")
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
 class DishBase(BaseModel):
     id: str = Field(..., description="Stable identifier used by the client")
@@ -19,6 +24,7 @@ class DishBase(BaseModel):
     notes: Optional[str] = None
     # expose as createdBy for the client
     created_by: Optional[str] = Field(default=None, alias="createdBy")
+    calories: float = Field(default=0, ge=0, description="Total calories (kcal)")
     model_config = ConfigDict(populate_by_name=True)
 
 class DishCreate(DishBase):
@@ -37,11 +43,11 @@ class DishInDB(DishBase):
 
 # --- plans -----------------------------------------------------------------
 class DayPlan(BaseModel):
-    id: str = Field(..., description="ISO date YYYY-MM-DD")
+    dateISO: str = Field(..., description="ISO date YYYY-MM-DD")
     slots: Dict[MealSlot, Optional[str]] = Field(default_factory=dict, description="dish id per slot")
 
 class DayPlanInDB(DayPlan):
-    id: str = Field(alias="_id")
+    dateISO: str = Field(alias="_id")
     model_config = ConfigDict(populate_by_name=True)
 
 # --- auth & users ----------------------------------------------------------
@@ -83,14 +89,47 @@ class TokenResponse(BaseModel):
 # --- ingredients directory -------------------------------------------------
 class IngredientUpsert(BaseModel):
     name: str
-    unit: str
+    unit: MeasurementUnit
     translations: Optional[Dict[str, str]] = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
 class IngredientEntry(BaseModel):
     key: str
     name: str
-    unit: str
+    unit: MeasurementUnit
     translations: Dict[str, str] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+# --- calorie presets -------------------------------------------------------
+class CalorieCreate(BaseModel):
+    ingredient_key: str = Field(..., alias="ingredientKey")
+    amount: float = Field(..., gt=0)
+    unit: MeasurementUnit
+    calories: float = Field(..., ge=0)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
+class CalorieUpdate(BaseModel):
+    ingredient_key: Optional[str] = Field(None, alias="ingredientKey")
+    amount: Optional[float] = Field(None, gt=0)
+    unit: Optional[MeasurementUnit] = None
+    calories: Optional[float] = Field(None, ge=0)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
+class CalorieEntry(BaseModel):
+    id: str = Field(alias="id")
+    ingredient_key: str = Field(alias="ingredientKey")
+    ingredient_name: str = Field(alias="ingredientName")
+    amount: float
+    unit: MeasurementUnit
+    calories: float = Field(ge=0)
+
+    model_config = ConfigDict(populate_by_name=True)
 
 # --- shopping list ---------------------------------------------------------
 class ShoppingListItem(BaseModel):

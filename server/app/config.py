@@ -9,6 +9,7 @@ class Settings:
     plans_collection: str = "plans"
     users_collection: str = "users"
     ingredients_collection: str = "ingredients"
+    calories_collection: str = "ingredient_calories"
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_exp_minutes: int
