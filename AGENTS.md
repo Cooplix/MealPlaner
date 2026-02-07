@@ -8,6 +8,7 @@
 - `server/app/` contains the FastAPI code; keep routers, schemas, and DB helpers modular.
 - `docker/` houses compose files and nginx config used for containerised deployments.
 - `docs/` stores project analyses and technical notes.
+- `scripts/` holds operational scripts (build/run and shutdown).
 
 ## Build, Test, and Development Commands
 - Run all npm scripts from `front/`.
