@@ -39,3 +39,4 @@
 
 ## Project Analysis
 - Current analysis: `docs/project-analysis-2026-02-07.md`
+- Backend migration plan (Python -> Java 25 + Spring Boot): `docs/backend-migration-java25-spring.md`
