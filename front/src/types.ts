@@ -18,6 +18,19 @@ export interface Dish {
   createdByName?: string | null;
 }
 
+export interface DishCostBreakdown {
+  dishId: string;
+  ingredientCosts: Array<{
+    ingredientName: string;
+    amount: number;
+    unit: string;
+    cost: number;
+    currency: string;
+  }>;
+  totalCost: number;
+  missing: Array<{ ingredientName: string; unit: string }>;
+}
+
 export interface DayPlan {
   dateISO: string;
   slots: Partial<Record<MealSlot, string>>;

@@ -1,4 +1,4 @@
-import type { CalorieEntry, PurchaseEntry } from "../types";
+import type { CalorieEntry, Dish, IngredientOption, PurchaseEntry } from "../types";
 import { normalizeQuantity, convertQuantity, type NormalizedBaseUnit } from "./pricing";
 
 export interface SpendStats {
@@ -190,5 +190,113 @@ export function calculateNutritionStats(
       purchasesWithCalories,
     },
     perIngredient,
+  };
+}
+
+export interface DishCostSummary {
+  dishId: string;
+  name: string;
+  totalCost: number;
+  normalizedCost?: number;
+  missingIngredients: Array<{ ingredient: string; unit: string }>;
+  ingredients: Array<{
+    ingredient: string;
+    amount: number;
+    unit: string;
+    cost: number;
+  }>;
+}
+
+export interface DishCostStats {
+  dishes: DishCostSummary[];
+  totalDishCost: number;
+  missingCount: number;
+}
+
+export function calculateDishCosts(
+  dishes: Dish[],
+  ingredientOptions: IngredientOption[],
+  purchases: PurchaseEntry[],
+): DishCostStats {
+  if (!dishes.length || !purchases.length) {
+    return { dishes: [], totalDishCost: 0, missingCount: 0 };
+  }
+
+  const purchaseMap = new Map<string, PurchaseEntry[]>();
+  purchases.forEach((purchase) => {
+    const list = purchaseMap.get(purchase.ingredientKey) ?? [];
+    list.push(purchase);
+    purchaseMap.set(purchase.ingredientKey, list);
+  });
+
+  const optionMap = new Map<string, IngredientOption>();
+  ingredientOptions.forEach((option) => optionMap.set(option.key, option));
+
+  const summaries: DishCostSummary[] = [];
+  let totalDishCost = 0;
+  let missingCount = 0;
+
+  dishes.forEach((dish) => {
+    let dishCost = 0;
+    const missing: Array<{ ingredient: string; unit: string }> = [];
+    const ingredientCosts: DishCostSummary["ingredients"] = [];
+
+    dish.ingredients.forEach((ingredient) => {
+      const keyCandidates = [
+        `${ingredient.name.trim().toLowerCase()}__${ingredient.unit.trim().toLowerCase()}`,
+      ];
+      const matchingOption = optionMap.get(keyCandidates[0]);
+      if (!matchingOption) {
+        missing.push({ ingredient: ingredient.name, unit: ingredient.unit });
+        return;
+      }
+
+      const purchasesForIngredient = purchaseMap.get(matchingOption.key);
+      if (!purchasesForIngredient?.length) {
+        missing.push({ ingredient: ingredient.name, unit: ingredient.unit });
+        return;
+      }
+
+      // take the most recent purchase as reference price
+      const latest = purchasesForIngredient.reduce((latestPurchase, current) =>
+        new Date(current.purchasedAt) > new Date(latestPurchase.purchasedAt) ? current : latestPurchase,
+      );
+
+      const normalized = normalizeQuantity(latest.amount, latest.unit);
+      const ingredientNormalized = normalizeQuantity(ingredient.qty, ingredient.unit);
+      if (!normalized || !ingredientNormalized || normalized.baseUnit !== ingredientNormalized.baseUnit) {
+        missing.push({ ingredient: ingredient.name, unit: ingredient.unit });
+        return;
+      }
+
+      if (normalized.amount <= 0) {
+        missing.push({ ingredient: ingredient.name, unit: ingredient.unit });
+        return;
+      }
+
+      const pricePerUnit = latest.price / normalized.amount;
+      const cost = pricePerUnit * ingredientNormalized.amount;
+      dishCost += cost;
+      ingredientCosts.push({ ingredient: ingredient.name, amount: ingredient.qty, unit: ingredient.unit, cost });
+    });
+
+    if (ingredientCosts.length) {
+      totalDishCost += dishCost;
+    }
+    missingCount += missing.length;
+
+    summaries.push({
+      dishId: dish.id,
+      name: dish.name,
+      totalCost: dishCost,
+      missingIngredients: missing,
+      ingredients: ingredientCosts,
+    });
+  });
+
+  return {
+    dishes: summaries.sort((a, b) => b.totalCost - a.totalCost),
+    totalDishCost,
+    missingCount,
   };
 }

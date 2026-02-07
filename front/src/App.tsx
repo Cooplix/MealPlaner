@@ -18,6 +18,7 @@ import {CaloriesPage} from "./features/calories/CaloriesPage";
 import {ProfilePage} from "./features/profile/ProfilePage";
 import {PurchasesPage} from "./features/purchases/PurchasesPage";
 import {SpendingPage} from "./features/spending/SpendingPage";
+import {DishCostsPage} from "./features/dishCosts/DishCostsPage";
 
 import type {
     CalorieEntry,
@@ -29,7 +30,7 @@ import type {
     UserProfile,
 } from "./types";
 
-type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories" | "purchases" | "spending" | "profile";
+type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories" | "purchases" | "spending" | "dishCosts" | "profile";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -539,6 +540,11 @@ function App() {
                                     active={activeTab === "spending"}
                                     onClick={() => setActiveTab("spending")}
                                 />
+                                <TabButton
+                                    label={t("tabs.dishCosts") as string}
+                                    active={activeTab === "dishCosts"}
+                                    onClick={() => setActiveTab("dishCosts")}
+                                />
                             </nav>
                             <div className="flex items-center gap-3 self-end lg:self-auto">
                                 <LanguageSwitcher/>
@@ -625,6 +631,14 @@ function App() {
                             purchases={purchases}
                             calorieEntries={calorieEntries}
                             onRefresh={refreshPurchases}
+                        />
+                    )}
+                    {activeTab === "dishCosts" && (
+                        <DishCostsPage
+                            dishes={dishes}
+                            purchases={purchases}
+                            ingredients={ingredientOptions}
+                            plans={plans}
                         />
                     )}
                     {activeTab === "profile" && (
