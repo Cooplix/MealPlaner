@@ -5,6 +5,8 @@ front/dist
 # Python artefacts
 **/__pycache__/
 **/*.py[cod]
+.venv/
+.pytest_cache/
 
 # Editor junk
 .idea/
