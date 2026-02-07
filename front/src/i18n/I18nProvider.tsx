@@ -1,14 +1,9 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { I18nContext, type I18nContextValue } from "./context";
+import { detectInitialLanguage, formatTemplate, resolveTranslation, type Replacements } from "./helpers";
 import { languageOptions } from "./translations";
 import type { Language } from "./types";
-import {
-  detectInitialLanguage,
-  formatTemplate,
-  resolveTranslation,
-  type Replacements,
-} from "./helpers";
-import { I18nContext, type I18nContextValue } from "./context";
 
 const STORAGE_KEY = "mealplanner_language";
 

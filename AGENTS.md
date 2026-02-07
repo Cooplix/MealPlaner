@@ -7,6 +7,7 @@
 - Frontend configs live under `front/` (`vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `tailwind.config.js`, `postcss.config.js`); update alongside structural changes.
 - `server/app/` contains the FastAPI code; keep routers, schemas, and DB helpers modular.
 - `docker/` houses compose files and nginx config used for containerised deployments.
+- `docs/` stores project analyses and technical notes.
 
 ## Build, Test, and Development Commands
 - Run all npm scripts from `front/`.
@@ -31,5 +32,9 @@
 ## Commit & Pull Request Guidelines
 - The repository lacks an established history; follow Conventional Commits (`feat:`, `fix:`, `chore:`) so automation can evolve later.
 - Scope commits narrowly, include contextual details in the body, and reference relevant issues.
+- Always create a commit at the end of each operation.
 - Pull requests should describe the change, list validation steps (`npm run lint`, `npm run build`), and add screenshots or screen recordings for UI updates.
 - Request review when the branch is rebased on the latest mainline and all required checks pass locally.
+
+## Project Analysis
+- Current analysis: `docs/project-analysis-2026-02-07.md`

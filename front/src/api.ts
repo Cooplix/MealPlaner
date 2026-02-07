@@ -76,9 +76,9 @@ async function request<T>(path: string, init?: RequestInit, includeAuth = true):
 function sanitizeDishPayload(dish: Dish): Partial<Dish> {
     const {id, ...rest} = dish;
     const payload: Partial<Dish> = {...rest, id};
-    delete (payload as Partial<Dish>).createdBy;
-    delete (payload as Partial<Dish>).createdByName;
-    delete (payload as Partial<Dish>).calories;
+    delete payload.createdBy;
+    delete payload.createdByName;
+    delete payload.calories;
     return payload;
 }
 
