@@ -280,6 +280,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     errors: {
       loadData: "Failed to load data: {{message}}",
+      loadAnalytics: "Failed to load analytics: {{message}}",
       saveDish: "Failed to save dish: {{message}}",
       deleteDish: "Failed to delete dish: {{message}}",
       savePlan: "Failed to save plan: {{message}}",
@@ -858,6 +859,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     errors: {
       loadData: "Не вдалося завантажити дані: {{message}}",
+      loadAnalytics: "Не вдалося завантажити аналітику: {{message}}",
       saveDish: "Не вдалося зберегти страву: {{message}}",
       deleteDish: "Не вдалося видалити страву: {{message}}",
       savePlan: "Не вдалося зберегти план: {{message}}",
@@ -1436,6 +1438,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     errors: {
       loadData: "Nie udało się wczytać danych: {{message}}",
+      loadAnalytics: "Nie udało się wczytać analityki: {{message}}",
       saveDish: "Nie udało się zapisać dania: {{message}}",
       deleteDish: "Nie udało się usunąć dania: {{message}}",
       savePlan: "Nie udało się zapisać planu: {{message}}",

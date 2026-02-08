@@ -32,6 +32,21 @@ export interface DishCostBreakdown {
   missing: Array<{ ingredientName: string; unit: string }>;
 }
 
+export interface DishCostSummary {
+  dishId: string;
+  name: string;
+  totalCost: number;
+  missingIngredients: Array<{ ingredient: string; unit: string }>;
+  ingredients: Array<{ ingredient: string; amount: number; unit: string; cost: number }>;
+}
+
+export interface DishCostAnalyticsResponse {
+  dishes: DishCostSummary[];
+  totalDishCost: number;
+  missingCount: number;
+  totalSpent: number;
+}
+
 export interface DayPlan {
   dateISO: string;
   slots: Partial<Record<MealSlot, string>>;
@@ -51,6 +66,59 @@ export interface ShoppingListItem {
 export interface ShoppingListResponse {
   range: { start: string; end: string };
   items: ShoppingListItem[];
+}
+
+export interface SpendingStats {
+  totalSpent: number;
+  averageDailySpend: number;
+  medianDailySpend: number;
+  daysTracked: number;
+  averagePurchase: number;
+  normalizedUnit?: string | null;
+  totalNormalizedQuantity?: number | null;
+  averageUnitPrice?: number | null;
+}
+
+export interface SpendingDailyTotal {
+  date: string;
+  total: number;
+}
+
+export interface SpendingTopSpender {
+  ingredientKey: string;
+  total: number;
+  share: number;
+  count: number;
+  averageUnitPrice?: number | null;
+  unitLabel?: string | null;
+}
+
+export interface NutritionStats {
+  totalCalories: number;
+  averageDailyCalories: number;
+  caloriesPerPurchase: number;
+  daysTracked: number;
+  purchasesWithCalories: number;
+}
+
+export interface TopCalorieItem {
+  ingredientKey: string;
+  totalCalories: number;
+  count: number;
+  normalizedAmount?: number | null;
+  normalizedUnit?: string | null;
+}
+
+export interface SpendingAnalyticsResponse {
+  range?: { start?: string | null; end?: string | null } | null;
+  ingredientKey?: string | null;
+  purchaseCount: number;
+  totals: SpendingStats;
+  allTime: SpendingStats;
+  dailyTotals: SpendingDailyTotal[];
+  topSpenders: SpendingTopSpender[];
+  nutrition: NutritionStats;
+  topCalories: TopCalorieItem[];
 }
 
 export interface UserProfile {

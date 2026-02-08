@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { api } from "../../api";
 import { useTranslation } from "../../i18n";
-import type { CalorieEntry, IngredientOption, PurchaseEntry } from "../../types";
+import type { CalorieEntry, IngredientOption, PurchaseEntry, SpendingAnalyticsResponse } from "../../types";
 import { getIngredientOptionLabel, getLocalizedIngredientName } from "../../utils/ingredientNames";
 import { computeUnitPrice } from "../../utils/pricing";
-import { calculateSpendStats, calculateNutritionStats } from "../../utils/statistics";
 
 interface SummaryCardProps {
   label: string;
@@ -44,6 +44,9 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
     ingredientKey: "",
   });
   const [reloading, setReloading] = useState(false);
+  const [analytics, setAnalytics] = useState<SpendingAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -79,6 +82,28 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
     void onRefresh();
   }, [onRefresh]);
 
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const data = await api.getSpendingAnalytics({
+        start: filters.start || undefined,
+        end: filters.end || undefined,
+        ingredientKey: filters.ingredientKey || undefined,
+      });
+      setAnalytics(data);
+      setAnalyticsError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? t("common.unknownError"));
+      setAnalyticsError(message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [filters.start, filters.end, filters.ingredientKey, t]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics, purchases.length, calorieEntries.length]);
+
   const filteredPurchases = useMemo(() => {
     return purchases.filter((purchase) => {
       if (filters.ingredientKey && purchase.ingredientKey !== filters.ingredientKey) {
@@ -100,108 +125,44 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
     });
   }, [filters, purchases]);
 
-  const dailyTotals = useMemo(() => {
-    const totals = new Map<string, number>();
-    filteredPurchases.forEach((purchase) => {
-      const key = purchase.purchasedAt.slice(0, 10);
-      totals.set(key, (totals.get(key) ?? 0) + purchase.price);
-    });
-    return Array.from(totals.entries())
-      .map(([date, total]) => ({ date, total }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredPurchases]);
+  const totals = analytics?.totals ?? null;
+  const allTimeTotals = analytics?.allTime ?? null;
+  const dailyTotals = analytics?.dailyTotals ?? [];
+  const topSpenders = analytics?.topSpenders ?? [];
+  const nutritionStats = analytics?.nutrition ?? null;
+  const topCalorieItems = analytics?.topCalories ?? [];
+  const totalSpent = totals?.totalSpent ?? 0;
+  const hasAnalytics = analytics !== null;
 
-  const totalSpent = useMemo(
-    () => filteredPurchases.reduce((sum, purchase) => sum + purchase.price, 0),
-    [filteredPurchases],
-  );
-
-  const currentStats = useMemo(() => calculateSpendStats(filteredPurchases), [filteredPurchases]);
-  const globalStats = useMemo(() => calculateSpendStats(purchases), [purchases]);
-  const { stats: nutritionStats, perIngredient: calorieBreakdown } = useMemo(
-    () => calculateNutritionStats(filteredPurchases, calorieEntries),
-    [filteredPurchases, calorieEntries],
-  );
-
-  const normalizedUnitLabel = currentStats.normalizedUnit
-    ? (t(`spending.summary.unitLabels.${currentStats.normalizedUnit}`) as string)
+  const normalizedUnitLabel = totals?.normalizedUnit
+    ? (t(`spending.summary.unitLabels.${totals.normalizedUnit}`) as string)
     : null;
-  const normalizedQuantityValue = currentStats.totalNormalizedQuantity && normalizedUnitLabel
+  const normalizedQuantityValue = totals?.totalNormalizedQuantity && normalizedUnitLabel
     ? `${new Intl.NumberFormat(locale, {
-        minimumFractionDigits: currentStats.normalizedUnit === "pcs" ? 0 : 2,
-        maximumFractionDigits: currentStats.normalizedUnit === "pcs" ? 0 : 2,
-      }).format(currentStats.totalNormalizedQuantity)} ${normalizedUnitLabel}`
+        minimumFractionDigits: totals.normalizedUnit === "pcs" ? 0 : 2,
+        maximumFractionDigits: totals.normalizedUnit === "pcs" ? 0 : 2,
+      }).format(totals.totalNormalizedQuantity)} ${normalizedUnitLabel}`
     : "—";
-  const averageUnitPriceValue = currentStats.averageUnitPrice && normalizedUnitLabel
-    ? `${currencyFormatter.format(currentStats.averageUnitPrice)} / ${normalizedUnitLabel}`
+  const averageUnitPriceValue = totals?.averageUnitPrice && normalizedUnitLabel
+    ? `${currencyFormatter.format(totals.averageUnitPrice)} / ${normalizedUnitLabel}`
     : "—";
-  const daysTrackedValue = currentStats.daysTracked > 0 ? `${currentStats.daysTracked}` : "—";
-  const averagePerPurchaseValue = filteredPurchases.length
-    ? currencyFormatter.format(totalSpent / filteredPurchases.length)
+  const daysTrackedValue = totals && totals.daysTracked > 0 ? `${totals.daysTracked}` : "—";
+  const averagePerPurchaseValue = analytics && analytics.purchaseCount > 0
+    ? currencyFormatter.format(totals?.averagePurchase ?? 0)
     : "—";
 
-  const hasCalorieData = nutritionStats.purchasesWithCalories > 0;
+  const hasCalorieData = (nutritionStats?.purchasesWithCalories ?? 0) > 0;
   const totalCaloriesValue = hasCalorieData
-    ? `${calorieFormatter.format(nutritionStats.totalCalories)} kcal`
-    : filteredPurchases.length
+    ? `${calorieFormatter.format(nutritionStats?.totalCalories ?? 0)} kcal`
+    : analytics && analytics.purchaseCount > 0
       ? `0 kcal`
       : "—";
   const averageDailyCaloriesValue = hasCalorieData
-    ? `${calorieFormatter.format(nutritionStats.averageDailyCalories)} kcal`
+    ? `${calorieFormatter.format(nutritionStats?.averageDailyCalories ?? 0)} kcal`
     : "—";
   const caloriesPerPurchaseValue = hasCalorieData
-    ? `${calorieFormatter.format(nutritionStats.caloriesPerPurchase)} kcal`
+    ? `${calorieFormatter.format(nutritionStats?.caloriesPerPurchase ?? 0)} kcal`
     : "—";
-
-  const topSpenders = useMemo(() => {
-    if (!filteredPurchases.length) return [] as Array<{
-      key: string;
-      total: number;
-      share: number;
-      count: number;
-      averageUnitPrice: number | null;
-      unitLabel?: string;
-    }>;
-
-    const buckets = new Map<string, { total: number; count: number; unitPriceSum: number; unitPriceCount: number; unitLabel?: string }>();
-    filteredPurchases.forEach((purchase) => {
-      const bucket = buckets.get(purchase.ingredientKey) ?? { total: 0, count: 0, unitPriceSum: 0, unitPriceCount: 0 };
-      bucket.total += purchase.price;
-      bucket.count += 1;
-      const unitPriceInfo = computeUnitPrice(purchase);
-      if (unitPriceInfo) {
-        bucket.unitPriceSum += unitPriceInfo.pricePerUnit;
-        bucket.unitPriceCount += 1;
-        bucket.unitLabel = unitPriceInfo.unitLabel;
-      }
-      buckets.set(purchase.ingredientKey, bucket);
-    });
-
-    return Array.from(buckets.entries())
-      .map(([key, info]) => ({
-        key,
-        total: info.total,
-        count: info.count,
-        share: totalSpent > 0 ? info.total / totalSpent : 0,
-        averageUnitPrice: info.unitPriceCount > 0 ? info.unitPriceSum / info.unitPriceCount : null,
-        unitLabel: info.unitLabel,
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-  }, [filteredPurchases, totalSpent]);
-
-  const topCalorieItems = useMemo(() => {
-    if (!calorieBreakdown.length || nutritionStats.totalCalories <= 0) return [];
-    return calorieBreakdown
-      .map((item) => ({
-        key: item.ingredientKey,
-        totalCalories: item.totalCalories,
-        count: item.count,
-        normalizedAmount: item.normalizedAmount,
-        normalizedUnit: item.normalizedUnit,
-      }))
-      .slice(0, 5);
-  }, [calorieBreakdown, nutritionStats.totalCalories]);
 
   const maxDailyTotal = dailyTotals.reduce((max, entry) => Math.max(max, entry.total), 0);
 
@@ -292,20 +253,28 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
             </select>
           </div>
         </div>
+        {analyticsError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {t("errors.loadAnalytics", { message: analyticsError })}
+          </div>
+        )}
+        {analyticsLoading && (
+          <div className="text-xs text-gray-500">{t("app.loading")}</div>
+        )}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           <SummaryCard
             label={t("spending.summary.totalLabel") as string}
-            value={currencyFormatter.format(totalSpent)}
+            value={hasAnalytics ? currencyFormatter.format(totalSpent) : "—"}
             tooltip={t("spending.summary.totalHint") as string}
           />
           <SummaryCard
             label={t("spending.summary.avgDaily") as string}
-            value={currencyFormatter.format(currentStats.averageDailySpend ?? 0)}
+            value={totals ? currencyFormatter.format(totals.averageDailySpend ?? 0) : "—"}
             tooltip={t("spending.summary.avgDailyHint") as string}
           />
           <SummaryCard
             label={t("spending.summary.medianDaily") as string}
-            value={currencyFormatter.format(currentStats.medianDailySpend ?? 0)}
+            value={totals ? currencyFormatter.format(totals.medianDailySpend ?? 0) : "—"}
             tooltip={t("spending.summary.medianDailyHint") as string}
           />
           <SummaryCard
@@ -330,7 +299,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           />
           <SummaryCard
             label={t("spending.summary.totalAll") as string}
-            value={currencyFormatter.format(globalStats.totalSpent ?? 0)}
+            value={allTimeTotals ? currencyFormatter.format(allTimeTotals.totalSpent ?? 0) : "—"}
             tooltip={t("spending.summary.totalAllHint") as string}
           />
           <SummaryCard
@@ -408,10 +377,10 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
               </thead>
               <tbody>
                 {topSpenders.map((entry) => {
-                  const ingredient = ingredientMap.get(entry.key);
+                  const ingredient = ingredientMap.get(entry.ingredientKey);
                   const ingredientName = ingredient
                     ? getIngredientOptionLabel(ingredient, language)
-                    : entry.key;
+                    : entry.ingredientKey;
                   const unitLabel = entry.unitLabel
                     ? (t(`spending.summary.unitLabels.${entry.unitLabel}`) as string)
                     : null;
@@ -419,7 +388,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
                     ? `${currencyFormatter.format(entry.averageUnitPrice)} / ${unitLabel}`
                     : "—";
                   return (
-                    <tr key={entry.key} className="border-b last:border-none">
+                    <tr key={entry.ingredientKey} className="border-b last:border-none">
                       <td className="py-2 pr-4 text-gray-900">{ingredientName}</td>
                       <td className="py-2 pr-4 text-gray-900">{currencyFormatter.format(entry.total)}</td>
                       <td className="py-2 pr-4 text-gray-600">{percentFormatter.format(entry.share)}</td>
@@ -457,21 +426,21 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
               </thead>
               <tbody>
                 {topCalorieItems.map((entry) => {
-                  const ingredient = ingredientMap.get(entry.key);
+                  const ingredient = ingredientMap.get(entry.ingredientKey);
                   const ingredientName = ingredient
                     ? getIngredientOptionLabel(ingredient, language)
-                    : entry.key;
+                    : entry.ingredientKey;
                   const unitLabel = entry.normalizedUnit
                     ? (t(`spending.summary.unitLabels.${entry.normalizedUnit}`) as string)
                     : null;
                   const quantityDisplay = unitLabel && entry.normalizedAmount
                     ? `${quantityFormatter.format(entry.normalizedAmount)} ${unitLabel}`
                     : "—";
-                  const share = nutritionStats.totalCalories > 0
-                    ? entry.totalCalories / nutritionStats.totalCalories
+                  const share = (nutritionStats?.totalCalories ?? 0) > 0
+                    ? entry.totalCalories / (nutritionStats?.totalCalories ?? 0)
                     : 0;
                   return (
-                    <tr key={entry.key} className="border-b last:border-none">
+                    <tr key={entry.ingredientKey} className="border-b last:border-none">
                       <td className="py-2 pr-4 text-gray-900">{ingredientName}</td>
                       <td className="py-2 pr-4 text-gray-900">
                         {calorieFormatter.format(entry.totalCalories)} kcal

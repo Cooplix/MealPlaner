@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { api } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { Language } from "../../i18n";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
-import type { DayPlan, Dish, IngredientOption, PurchaseEntry } from "../../types";
-import {
-  calculateDishCosts,
-  type DishCostSummary,
-  calculateSpendStats,
-} from "../../utils/statistics";
+import type {
+  DayPlan,
+  Dish,
+  DishCostAnalyticsResponse,
+  DishCostSummary,
+  IngredientOption,
+  PurchaseEntry,
+} from "../../types";
 import { getIngredientOptionLabel } from "../../utils/ingredientNames";
 
 interface DishCostsPageProps {
@@ -33,6 +36,27 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
     minCost: "",
     maxCost: "",
   });
+  const [analytics, setAnalytics] = useState<DishCostAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const data = await api.getDishCostAnalytics();
+      setAnalytics(data);
+      setAnalyticsError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? t("common.unknownError"));
+      setAnalyticsError(message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics, dishes.length, ingredients.length, purchases.length]);
 
   const scheduledDishIds = useMemo(() => {
     const ids = new Set<string>();
@@ -44,15 +68,12 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
     return ids;
   }, [plans]);
 
-  const costStats = useMemo(
-    () => calculateDishCosts(dishes, ingredients, purchases),
-    [dishes, ingredients, purchases],
-  );
-
-  const spendStats = useMemo(
-    () => calculateSpendStats(purchases),
-    [purchases],
-  );
+  const costStats = analytics ?? {
+    dishes: [],
+    totalDishCost: 0,
+    missingCount: 0,
+    totalSpent: 0,
+  };
 
   const dishMap = useMemo(() => new Map(dishes.map((dish) => [dish.id, dish])), [dishes]);
 
@@ -108,6 +129,14 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
         <h1 className="text-2xl font-semibold text-gray-900">{t("dishCosts.title")}</h1>
         <p className="text-sm text-gray-500">{t("dishCosts.subtitle")}</p>
       </header>
+      {analyticsError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {t("errors.loadAnalytics", { message: analyticsError })}
+        </div>
+      )}
+      {analyticsLoading && (
+        <div className="text-xs text-gray-500">{t("app.loading")}</div>
+      )}
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">{t("dishCosts.filters.heading")}</h2>
@@ -191,12 +220,12 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
           <SummaryCard
             label={t("dishCosts.summary.costShare") as string}
             value={
-              spendStats.totalSpent
+              costStats.totalSpent
                 ? `${new Intl.NumberFormat(undefined, {
                     style: "percent",
                     minimumFractionDigits: 1,
                   }).format(
-                    totalFilteredCost / spendStats.totalSpent,
+                    totalFilteredCost / costStats.totalSpent,
                   )}`
                 : "—"
             }

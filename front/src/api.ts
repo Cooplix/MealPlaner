@@ -4,6 +4,8 @@ import type {
     Dish,
     IngredientOption,
     PurchaseEntry,
+    DishCostAnalyticsResponse,
+    SpendingAnalyticsResponse,
     ReferenceData,
     ShoppingListResponse,
     TokenResponse,
@@ -283,5 +285,22 @@ export const api = {
 
     async getReferenceData(): Promise<ReferenceData> {
         return request<ReferenceData>("/reference-data");
+    },
+
+    async getSpendingAnalytics(params?: {
+        start?: string;
+        end?: string;
+        ingredientKey?: string;
+    }): Promise<SpendingAnalyticsResponse> {
+        const query = new URLSearchParams();
+        if (params?.start) query.set("start", params.start);
+        if (params?.end) query.set("end", params.end);
+        if (params?.ingredientKey) query.set("ingredientKey", params.ingredientKey);
+        const suffix = query.toString() ? `?${query.toString()}` : "";
+        return request<SpendingAnalyticsResponse>(`/analytics/spending${suffix}`);
+    },
+
+    async getDishCostAnalytics(): Promise<DishCostAnalyticsResponse> {
+        return request<DishCostAnalyticsResponse>("/analytics/dish-costs");
     },
 };
