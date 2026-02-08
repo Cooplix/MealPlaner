@@ -25,7 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
-| 2026-02-08 | Functions Unification | Step 4: purchases can auto-apply to inventory on create | completed | Not run (not requested) | pending |
+| 2026-02-08 | Functions Unification | Step 4: purchases can auto-apply to inventory on create | completed | Not run (not requested) | 4eedffa |
 | 2026-02-08 | Functions Unification | Step 3: Shopping List v2 uses inventory stock to calculate deficit (UI columns + build fix) | completed | Not run (not requested) | e2b8176 |
 | 2026-02-08 | Functions Unification | Step 2: added `user_id` scoping to dishes, plans, ingredients, calories, purchases (Java backend) | completed | Not run (not requested) | 864d982 |
 | 2026-02-08 | Functions Unification | Step 1: added `ingredientKey` to dishes and inventory (frontend + Java backend) | completed | Not run (not requested) | e48b438 |
