@@ -13,4 +13,4 @@ services:
       ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"

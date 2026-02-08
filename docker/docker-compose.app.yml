@@ -13,7 +13,7 @@ services:
       ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-ChangeMeNow123!}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -31,5 +31,5 @@ services:
     depends_on:
       - backend-java
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     restart: unless-stopped
