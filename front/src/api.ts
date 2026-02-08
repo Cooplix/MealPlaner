@@ -12,7 +12,7 @@ import type {
 const envApiRoot = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 const defaultApiRoot = import.meta.env.DEV ? "http://localhost:8000/api" : `${baseUrl}/api`;
-const API_ROOT =
+export const API_ROOT =
     envApiRoot && envApiRoot.length > 0
         ? envApiRoot
         : defaultApiRoot;
