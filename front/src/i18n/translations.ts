@@ -139,6 +139,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           submit: "Failed to consume item: {{message}}",
         },
       },
+      events: {
+        title: "Inventory events",
+        subtitle: "Upcoming expiry and restock alerts.",
+        empty: "No upcoming inventory events.",
+        expiryLabel: "Expiry",
+        restockLabel: "Restock",
+      },
       pet: {
         table: {
           count: "{{count}} items",
@@ -686,6 +693,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           submit: "Не вдалося списати: {{message}}",
         },
       },
+      events: {
+        title: "Події інвентарю",
+        subtitle: "Нагадування про термін і поповнення.",
+        empty: "Немає найближчих подій.",
+        expiryLabel: "Термін",
+        restockLabel: "Поповнення",
+      },
       pet: {
         table: {
           count: "{{count}} позицій",
@@ -1232,6 +1246,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           unknownItem: "Nieznana pozycja.",
           submit: "Nie udało się zużyć: {{message}}",
         },
+      },
+      events: {
+        title: "Wydarzenia zapasów",
+        subtitle: "Alerty ważności i uzupełnień.",
+        empty: "Brak nadchodzących wydarzeń.",
+        expiryLabel: "Ważność",
+        restockLabel: "Uzupełnienie",
       },
       pet: {
         table: {

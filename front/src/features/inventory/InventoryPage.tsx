@@ -52,8 +52,15 @@ type PetFormState = {
   notes: string;
 };
 
+type InventoryEvent = {
+  id: string;
+  date: Date;
+  label: string;
+  kind: "expiry" | "restock";
+};
+
 export function InventoryPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +113,7 @@ export function InventoryPage() {
       t("inventory.hints.status"),
     ];
   }, [t]);
+  const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
 
   useEffect(() => {
     let ignore = false;
@@ -204,6 +212,38 @@ export function InventoryPage() {
       return true;
     });
   }, [items, filters]);
+
+  const upcomingEvents = useMemo<InventoryEvent[]>(() => {
+    const now = new Date();
+    const events: InventoryEvent[] = [];
+    const addExpiry = (id: string, label: string, expiresAt?: string | null) => {
+      if (!expiresAt) return;
+      const date = new Date(expiresAt);
+      if (Number.isNaN(date.getTime())) return;
+      events.push({ id: `expiry-${id}`, date, label, kind: "expiry" });
+    };
+    const addRestock = (id: string, label: string, quantity: number, minQty?: number | null) => {
+      if (minQty == null || quantity >= minQty) return;
+      events.push({ id: `restock-${id}`, date: now, label, kind: "restock" });
+    };
+
+    items.forEach((item) => {
+      const name = item.name;
+      addExpiry(item.id, name, item.expiresAt);
+      addRestock(item.id, name, item.quantity, item.minQty);
+    });
+
+    petItems.forEach((item) => {
+      const name = `${item.manufacturer} ${item.productName}`.trim();
+      addExpiry(item.id, name, item.expiresAt);
+      addRestock(item.id, name, item.quantity, item.minQty);
+    });
+
+    return events
+      .filter((event) => event.date >= new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 10);
+  }, [items, petItems]);
 
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -799,6 +839,39 @@ export function InventoryPage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="text-sm font-semibold text-gray-800">{t("inventory.events.title")}</div>
+        <p className="mt-1 text-sm text-gray-500">{t("inventory.events.subtitle")}</p>
+        <div className="mt-4">
+          {upcomingEvents.length === 0 && (
+            <div className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-500">
+              {t("inventory.events.empty")}
+            </div>
+          )}
+          {upcomingEvents.length > 0 && (
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-start justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <div className="font-medium text-gray-800">{event.label}</div>
+                    <div className="text-xs text-gray-500">
+                      {event.kind === "expiry"
+                        ? t("inventory.events.expiryLabel")
+                        : t("inventory.events.restockLabel")}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {event.date.toLocaleDateString(locale)}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
