@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   backend-java:
+    container_name: mealplaner-backend
     build:
       context: ..
       dockerfile: server-java/Dockerfile
