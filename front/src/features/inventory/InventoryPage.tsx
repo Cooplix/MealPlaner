@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AutocompleteInput from "../../components/AutocompleteInput";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
 import { findIngredientOption, getIngredientOptionLabel } from "../../utils/ingredientNames";
@@ -519,6 +520,15 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
         );
       })
       .slice(0, 8);
+  }
+
+  function buildIngredientSuggestions(value: string) {
+    return suggestionList(value).map((option) => ({
+      key: option.key,
+      value: getIngredientOptionLabel(option, language),
+      label: getIngredientOptionLabel(option, language),
+      meta: option.unit,
+    }));
   }
 
   async function submitForm(event: React.FormEvent) {
@@ -1132,19 +1142,14 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.name")}</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  <AutocompleteInput
+                    containerClassName="mt-1"
+                    inputClassName="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     value={formData.name}
-                    onChange={(event) => handleNameChange(event.target.value)}
-                    list="inventory-ingredient-suggestions"
+                    onChange={(value) => handleNameChange(value)}
+                    options={buildIngredientSuggestions(formData.name)}
+                    ariaLabel={t("inventory.form.fields.name") as string}
                   />
-                  <datalist id="inventory-ingredient-suggestions">
-                    {suggestionList(formData.name).map((option) => (
-                      <option key={option.key} value={getIngredientOptionLabel(option, language)}>
-                        {getIngredientOptionLabel(option, language)} · {option.unit}
-                      </option>
-                    ))}
-                  </datalist>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.baseName")}</label>

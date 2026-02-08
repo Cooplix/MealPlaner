@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 
+import AutocompleteInput from "../../components/AutocompleteInput";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
@@ -347,6 +348,19 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
       .slice(0, 8);
   }
 
+  function buildIngredientSuggestions(value: string) {
+    return suggestionList(value).map((option) => {
+      const localized = option.translations[language];
+      const label = localized && localized.trim().length > 0 ? localized : option.name;
+      return {
+        key: option.key,
+        value: label,
+        label,
+        meta: formatUnit(option.unit),
+      };
+    });
+  }
+
   function updateIngredient(id: string, patch: Partial<Ingredient>) {
     setState((prev) => ({
       ...prev,
@@ -489,25 +503,15 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
               key={ingredient.id}
               className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-center"
             >
-              <input
-                className="rounded-xl border px-3 py-2 sm:col-span-4"
+              <AutocompleteInput
+                containerClassName="sm:col-span-4"
+                inputClassName="w-full rounded-xl border px-3 py-2"
                 placeholder={t("dishes.editor.ingredientNamePlaceholder")}
                 value={displayNameForIngredient(ingredient)}
-                onChange={(event) => handleNameChange(ingredient.id, event.target.value)}
-                list={`ingredient-suggestions-${ingredient.id}`}
+                onChange={(value) => handleNameChange(ingredient.id, value)}
+                options={buildIngredientSuggestions(ingredient.name)}
+                ariaLabel={t("dishes.editor.ingredientNamePlaceholder") as string}
               />
-              <datalist id={`ingredient-suggestions-${ingredient.id}`}>
-                {suggestionList(ingredient.name).map((option) => {
-                  const localized = option.translations[language];
-                  const value = localized && localized.trim().length > 0 ? localized : option.name;
-                  const label = localized && localized.trim().length > 0 ? localized : option.name;
-                  return (
-                    <option key={option.key} value={value}>
-                      {label} · {formatUnit(option.unit)}
-                    </option>
-                  );
-                })}
-              </datalist>
               <input
                 type="number"
                 className="rounded-xl border px-3 py-2 sm:col-span-2"
