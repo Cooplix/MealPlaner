@@ -38,9 +38,18 @@ export function ShoppingPage({ fetchList, ingredientOptions }: ShoppingPageProps
       items.map((item) => ({
         item,
         displayName: resolveIngredientName(item.name, item.unit),
-        requiredQty: Number.isFinite(item.requiredQty) ? item.requiredQty : item.qty,
-        inStockQty: Number.isFinite(item.inStockQty) ? item.inStockQty : 0,
-        toBuyQty: Number.isFinite(item.toBuyQty) ? item.toBuyQty : item.qty,
+        requiredQty:
+          typeof item.requiredQty === "number" && Number.isFinite(item.requiredQty)
+            ? item.requiredQty
+            : item.qty,
+        inStockQty:
+          typeof item.inStockQty === "number" && Number.isFinite(item.inStockQty)
+            ? item.inStockQty
+            : 0,
+        toBuyQty:
+          typeof item.toBuyQty === "number" && Number.isFinite(item.toBuyQty)
+            ? item.toBuyQty
+            : item.qty,
       })),
     [items, resolveIngredientName],
   );
@@ -189,8 +198,21 @@ function ExportButton({ items, disabled, resolveIngredientName }: ExportButtonPr
   function asText() {
     return items
       .map(
-        (item) =>
-          `• ${resolveIngredientName(item.name, item.unit)}: ${Number((item.toBuyQty ?? item.qty).toFixed(2))} ${formatUnit(item.unit)} (need ${Number((item.requiredQty ?? item.qty).toFixed(2))}, stock ${Number((item.inStockQty ?? 0).toFixed(2))}) (${item.dishes.join(", ") || "—"})`,
+        (item) => {
+          const requiredQty =
+            typeof item.requiredQty === "number" && Number.isFinite(item.requiredQty)
+              ? item.requiredQty
+              : item.qty;
+          const inStockQty =
+            typeof item.inStockQty === "number" && Number.isFinite(item.inStockQty)
+              ? item.inStockQty
+              : 0;
+          const toBuyQty =
+            typeof item.toBuyQty === "number" && Number.isFinite(item.toBuyQty)
+              ? item.toBuyQty
+              : item.qty;
+          return `• ${resolveIngredientName(item.name, item.unit)}: ${Number(toBuyQty.toFixed(2))} ${formatUnit(item.unit)} (need ${Number(requiredQty.toFixed(2))}, stock ${Number(inStockQty.toFixed(2))}) (${item.dishes.join(", ") || "—"})`;
+        },
       )
       .join("\n");
   }
