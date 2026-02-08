@@ -25,6 +25,9 @@ function buildIngredientKey(name: string, unit: string): string {
   return `${normalizeKey(name)}__${normalizeKey(unit)}`;
 }
 
+const NOTES_PREVIEW_LIMIT = 180;
+const INGREDIENT_PREVIEW_LIMIT = 6;
+
 function resolveIngredientKey(ingredient: Ingredient): string | null {
   if (ingredient.ingredientKey && ingredient.ingredientKey.trim()) {
     return normalizeKey(ingredient.ingredientKey);
@@ -42,6 +45,7 @@ export function DishesPage({
   units,
 }: DishesPageProps) {
   const [editing, setEditing] = useState<Dish | null>(null);
+  const [detailDish, setDetailDish] = useState<Dish | null>(null);
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
@@ -119,6 +123,17 @@ export function DishesPage({
     }
   }
 
+  function openDishDetails(dish: Dish) {
+    setDetailDish(dish);
+  }
+
+  function openDishEditorFromDetails() {
+    if (!detailDish) return;
+    setDetailDish(null);
+    setEditing(detailDish);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -172,8 +187,19 @@ export function DishesPage({
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((dish) => (
-          <div key={dish.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+        {filtered.map((dish) => {
+          const notes = dish.notes?.trim() ?? "";
+          const hasLongNotes = notes.length > NOTES_PREVIEW_LIMIT;
+          const notesPreview = hasLongNotes ? `${notes.slice(0, NOTES_PREVIEW_LIMIT).trim()}…` : notes;
+          const visibleIngredients = dish.ingredients.slice(0, INGREDIENT_PREVIEW_LIMIT);
+          const remainingIngredients = Math.max(0, dish.ingredients.length - visibleIngredients.length);
+          const showMore = hasLongNotes || remainingIngredients > 0;
+
+          return (
+            <div
+              key={dish.id}
+              className="rounded-2xl border bg-white p-4 shadow-sm flex flex-col h-[360px]"
+            >
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -185,11 +211,11 @@ export function DishesPage({
                 <p className="text-xs text-gray-500">
                   {t("dishes.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
                 </p>
-                  {(dish.createdByName || dish.createdBy) && (
-                      <p className="text-xs text-gray-400">
-                          Added by {dish.createdByName ?? dish.createdBy}
-                      </p>
-                  )}
+                {(dish.createdByName || dish.createdBy) && (
+                  <p className="text-xs text-gray-400">
+                    Added by {dish.createdByName ?? dish.createdBy}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -207,23 +233,113 @@ export function DishesPage({
                 </button>
               </div>
             </div>
-            <ul className="mt-3 text-sm list-disc list-inside text-gray-700">
-              {dish.ingredients.map((ingredient) => (
+            <div className="mt-3 flex-1 space-y-2 overflow-hidden">
+              <ul className="text-sm list-disc list-inside text-gray-700 space-y-1">
+                {visibleIngredients.map((ingredient) => (
                 <li key={ingredient.id}>
                   {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
                 </li>
               ))}
-            </ul>
-            {dish.notes && <p className="mt-2 text-sm text-gray-500">{dish.notes}</p>}
-            {usedDishIds.has(dish.id) && (
-              <div className="mt-3 inline-block text-xs px-3 py-1 rounded bg-gray-100">
-                {t("dishes.inCalendar")}
-              </div>
-            )}
+              </ul>
+              {remainingIngredients > 0 && (
+                <div className="text-xs text-gray-400">
+                  {t("dishes.moreIngredients", { count: remainingIngredients })}
+                </div>
+              )}
+              {notes && (
+                <p className="text-sm text-gray-500 whitespace-pre-wrap">{notesPreview}</p>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              {usedDishIds.has(dish.id) && (
+                <div className="inline-block text-xs px-3 py-1 rounded bg-gray-100">
+                  {t("dishes.inCalendar")}
+                </div>
+              )}
+              {showMore && (
+                <button
+                  className="text-xs font-semibold text-gray-700 hover:text-gray-900"
+                  onClick={() => openDishDetails(dish)}
+                >
+                  {t("dishes.showMore")}
+                </button>
+              )}
+            </div>
           </div>
-        ))}
+          );
+        })}
         {!filtered.length && <div className="text-gray-500">{t("dishes.empty")}</div>}
       </div>
+
+      {detailDish && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDetailDish(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {detailDish.name || t("dishes.untitled")}
+                </h2>
+                <p className="text-sm text-gray-500">{t("dishes.detailsTitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setDetailDish(null)}
+                aria-label={t("dishes.detailsClose") as string}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {t("dishes.editor.ingredientsTitle")}
+                </div>
+                <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-gray-700">
+                  {detailDish.ingredients.map((ingredient) => (
+                    <li key={ingredient.id}>
+                      {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {detailDish.notes && detailDish.notes.trim() && (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {t("dishes.detailsNotes")}
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
+                    {detailDish.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-xl border px-3 py-2 text-sm"
+                onClick={() => setDetailDish(null)}
+              >
+                {t("dishes.detailsClose")}
+              </button>
+              <button
+                type="button"
+                className="rounded-xl bg-gray-900 px-3 py-2 text-sm text-white"
+                onClick={openDishEditorFromDetails}
+              >
+                {t("dishes.detailsOpen")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
