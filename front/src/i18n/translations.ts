@@ -352,7 +352,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       download: "Download",
       columns: {
         product: "Product",
-        quantity: "Quantity",
+        required: "Required",
+        inStock: "In stock",
+        toBuy: "To buy",
         unit: "Unit",
         done: "Bought",
       },
@@ -907,7 +909,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       download: "Завантажити",
       columns: {
         product: "Продукт",
-        quantity: "Кількість",
+        required: "Потрібно",
+        inStock: "В наявності",
+        toBuy: "Купити",
         unit: "Одиниця",
         done: "Придбано",
       },
@@ -1462,7 +1466,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       download: "Pobierz",
       columns: {
         product: "Produkt",
-        quantity: "Ilość",
+        required: "Potrzeba",
+        inStock: "Na stanie",
+        toBuy: "Do kupienia",
         unit: "Jednostka",
         done: "Kupione",
       },

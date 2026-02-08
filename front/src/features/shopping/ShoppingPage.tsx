@@ -38,6 +38,9 @@ export function ShoppingPage({ fetchList, ingredientOptions }: ShoppingPageProps
       items.map((item) => ({
         item,
         displayName: resolveIngredientName(item.name, item.unit),
+        requiredQty: Number.isFinite(item.requiredQty) ? item.requiredQty : item.qty,
+        inStockQty: Number.isFinite(item.inStockQty) ? item.inStockQty : 0,
+        toBuyQty: Number.isFinite(item.toBuyQty) ? item.toBuyQty : item.qty,
       })),
     [items, resolveIngredientName],
   );
@@ -137,12 +140,14 @@ export function ShoppingPage({ fetchList, ingredientOptions }: ShoppingPageProps
               <tr className="text-left border-b">
                 <th className="py-2 w-12">{t("shopping.columns.done")}</th>
                 <th className="py-2">{t("shopping.columns.product")}</th>
-                <th className="py-2">{t("shopping.columns.quantity")}</th>
+                <th className="py-2">{t("shopping.columns.required")}</th>
+                <th className="py-2">{t("shopping.columns.inStock")}</th>
+                <th className="py-2">{t("shopping.columns.toBuy")}</th>
                 <th className="py-2">{t("shopping.columns.unit")}</th>
               </tr>
             </thead>
             <tbody>
-              {localizedItems.map(({ item, displayName }) => (
+              {localizedItems.map(({ item, displayName, requiredQty, inStockQty, toBuyQty }) => (
                 <tr key={item.name + item.unit} className="border-b">
                   <td className="py-2">
                     <input
@@ -153,7 +158,9 @@ export function ShoppingPage({ fetchList, ingredientOptions }: ShoppingPageProps
                     />
                   </td>
                   <td className="py-2">{displayName}</td>
-                  <td className="py-2">{Number(item.qty.toFixed(2))}</td>
+                  <td className="py-2">{Number(requiredQty.toFixed(2))}</td>
+                  <td className="py-2">{Number(inStockQty.toFixed(2))}</td>
+                  <td className="py-2">{Number(toBuyQty.toFixed(2))}</td>
                   <td className="py-2">{formatUnit(item.unit)}</td>
                 </tr>
               ))}
@@ -183,7 +190,7 @@ function ExportButton({ items, disabled, resolveIngredientName }: ExportButtonPr
     return items
       .map(
         (item) =>
-          `• ${resolveIngredientName(item.name, item.unit)}: ${Number(item.qty.toFixed(2))} ${formatUnit(item.unit)} (${item.dishes.join(", ") || "—"})`,
+          `• ${resolveIngredientName(item.name, item.unit)}: ${Number((item.toBuyQty ?? item.qty).toFixed(2))} ${formatUnit(item.unit)} (need ${Number((item.requiredQty ?? item.qty).toFixed(2))}, stock ${Number((item.inStockQty ?? 0).toFixed(2))}) (${item.dishes.join(", ") || "—"})`,
       )
       .join("\n");
   }

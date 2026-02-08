@@ -4,7 +4,11 @@ import com.mealplaner.api.dto.ShoppingListItem;
 import com.mealplaner.dish.DishDocument;
 import com.mealplaner.plan.PlanDocument;
 import com.mealplaner.dish.DishRepository;
+import com.mealplaner.inventory.InventoryItemDocument;
+import com.mealplaner.inventory.InventoryItemRepository;
 import com.mealplaner.plan.PlanService;
+import com.mealplaner.util.IngredientKey;
+import com.mealplaner.util.Units;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,10 +22,16 @@ import org.springframework.stereotype.Service;
 public class ShoppingService {
   private final PlanService planService;
   private final DishRepository dishRepository;
+  private final InventoryItemRepository inventoryRepository;
 
-  public ShoppingService(PlanService planService, DishRepository dishRepository) {
+  public ShoppingService(
+      PlanService planService,
+      DishRepository dishRepository,
+      InventoryItemRepository inventoryRepository
+  ) {
     this.planService = planService;
     this.dishRepository = dishRepository;
+    this.inventoryRepository = inventoryRepository;
   }
 
   public List<ShoppingListItem> build(String userId, String start, String end) {
@@ -49,6 +59,27 @@ public class ShoppingService {
       dishes.put(dish.getId(), dish);
     }
 
+    Map<String, Double> stockByKey = new HashMap<>();
+    Map<String, Double> stockByName = new HashMap<>();
+    for (InventoryItemDocument item : inventoryRepository.findByUserId(userId)) {
+      if (item == null || item.getName() == null) {
+        continue;
+      }
+      String unit = Units.sanitize(item.getUnit());
+      String normalizedName = item.getName().trim();
+      if (normalizedName.isEmpty()) {
+        continue;
+      }
+      String nameKey = IngredientKey.normalize(normalizedName, unit);
+      String ingredientKey = normalizeKey(item.getIngredientKey());
+      String nameBucket = nameKey + "::" + unit;
+      stockByName.put(nameBucket, stockByName.getOrDefault(nameBucket, 0.0) + item.getQuantity());
+      if (ingredientKey != null) {
+        String keyBucket = ingredientKey + "::" + unit;
+        stockByKey.put(keyBucket, stockByKey.getOrDefault(keyBucket, 0.0) + item.getQuantity());
+      }
+    }
+
     Map<String, ShoppingListItem> totals = new HashMap<>();
     for (List<String> slots : planSlots.values()) {
       for (String dishId : slots) {
@@ -57,16 +88,30 @@ public class ShoppingService {
           continue;
         }
         dish.getIngredients().forEach(ingredient -> {
-          String key = ingredient.getName() + "::" + ingredient.getUnit();
-          ShoppingListItem item = totals.computeIfAbsent(key, k -> {
+          if (ingredient.getName() == null || ingredient.getName().trim().isEmpty()) {
+            return;
+          }
+          String unit = Units.sanitize(ingredient.getUnit());
+          String normalizedName = ingredient.getName().trim();
+          String ingredientKey = normalizeKey(ingredient.getIngredientKey());
+          String nameKey = IngredientKey.normalize(normalizedName, unit);
+          String aggregateKey = (ingredientKey == null ? nameKey : ingredientKey) + "::" + unit;
+          ShoppingListItem item = totals.computeIfAbsent(aggregateKey, k -> {
             ShoppingListItem created = new ShoppingListItem();
-            created.setName(ingredient.getName());
-            created.setUnit(ingredient.getUnit());
+            created.setIngredientKey(ingredientKey);
+            created.setName(normalizedName);
+            created.setUnit(unit);
             created.setQty(0.0);
+            created.setRequiredQty(0.0);
+            created.setInStockQty(0.0);
+            created.setToBuyQty(0.0);
             created.setDishes(new ArrayList<>());
             return created;
           });
-          item.setQty(item.getQty() + ingredient.getQty());
+          if (item.getIngredientKey() == null && ingredientKey != null) {
+            item.setIngredientKey(ingredientKey);
+          }
+          item.setRequiredQty(item.getRequiredQty() + ingredient.getQty());
           if (!item.getDishes().contains(dishId)) {
             item.getDishes().add(dishId);
           }
@@ -74,8 +119,34 @@ public class ShoppingService {
       }
     }
 
+    for (ShoppingListItem item : totals.values()) {
+      String unit = Units.sanitize(item.getUnit());
+      String ingredientKey = normalizeKey(item.getIngredientKey());
+      String nameKey = IngredientKey.normalize(item.getName(), unit);
+      String keyBucket = ingredientKey == null ? null : ingredientKey + "::" + unit;
+      String nameBucket = nameKey + "::" + unit;
+      double inStock = 0.0;
+      if (keyBucket != null && stockByKey.containsKey(keyBucket)) {
+        inStock = stockByKey.getOrDefault(keyBucket, 0.0);
+      } else {
+        inStock = stockByName.getOrDefault(nameBucket, 0.0);
+      }
+      double required = item.getRequiredQty();
+      double toBuy = Math.max(required - inStock, 0.0);
+      item.setInStockQty(inStock);
+      item.setToBuyQty(toBuy);
+      item.setQty(toBuy);
+    }
+
     return totals.values().stream()
         .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
         .toList();
+  }
+
+  private String normalizeKey(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    return value.trim().toLowerCase();
   }
 }

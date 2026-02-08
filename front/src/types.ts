@@ -38,9 +38,13 @@ export interface DayPlan {
 }
 
 export interface ShoppingListItem {
+  ingredientKey?: string | null;
   name: string;
   unit: string;
   qty: number;
+  requiredQty?: number;
+  inStockQty?: number;
+  toBuyQty?: number;
   dishes: string[];
 }
 
