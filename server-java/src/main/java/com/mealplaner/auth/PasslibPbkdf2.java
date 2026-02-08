@@ -3,22 +3,12 @@ package com.mealplaner.auth;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Base64;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 public final class PasslibPbkdf2 {
   private static final String PREFIX = "$pbkdf2-sha256$";
-  private static final String ALPHABET = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  private static final Map<Character, Integer> ALPHABET_MAP = new HashMap<>();
-
-  static {
-    for (int i = 0; i < ALPHABET.length(); i += 1) {
-      ALPHABET_MAP.put(ALPHABET.charAt(i), i);
-    }
-  }
-
   private PasslibPbkdf2() {}
 
   public static boolean matches(String rawPassword, String stored) {
@@ -52,26 +42,12 @@ public final class PasslibPbkdf2 {
   }
 
   private static byte[] decodeAb64(String input) {
-    int buffer = 0;
-    int bits = 0;
-    byte[] out = new byte[input.length() * 3 / 4 + 3];
-    int outPos = 0;
-
-    for (int i = 0; i < input.length(); i += 1) {
-      Integer value = ALPHABET_MAP.get(input.charAt(i));
-      if (value == null) {
-        continue;
-      }
-      buffer = (buffer << 6) | value;
-      bits += 6;
-      if (bits >= 8) {
-        bits -= 8;
-        out[outPos++] = (byte) ((buffer >> bits) & 0xff);
-      }
+    if (input == null || input.isBlank()) {
+      return new byte[0];
     }
-
-    byte[] trimmed = new byte[outPos];
-    System.arraycopy(out, 0, trimmed, 0, outPos);
-    return trimmed;
+    String normalized = input.replace('.', '+');
+    int padding = (4 - (normalized.length() % 4)) % 4;
+    normalized = normalized + "=".repeat(padding);
+    return Base64.getDecoder().decode(normalized);
   }
 }

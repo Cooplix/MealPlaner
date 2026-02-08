@@ -11,7 +11,7 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:change-me}
+    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
     algorithm: HS256
     exp-minutes: ${JWT_EXP_MINUTES:120}
   admin:

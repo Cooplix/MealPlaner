@@ -10,7 +10,7 @@ from .config import get_settings
 from .db import get_database
 from .schemas import TokenData, UserInDB, UserPublic
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 # --- password helpers -----------------------------------------------------

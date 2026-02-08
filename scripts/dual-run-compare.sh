@@ -9,14 +9,14 @@ ADMIN_PASSWORD="${ADMIN_INITIAL_PASSWORD:-ChangeMeNow123!}"
 request_json() {
   local url=$1
   local path=$2
-  curl -sS -w "\n%{http_code}" -H "Content-Type: application/json" "$url$path"
+  curl -sS -L -w "\n%{http_code}" -H "Content-Type: application/json" "$url$path"
 }
 
 post_json() {
   local url=$1
   local path=$2
   local data=$3
-  curl -sS -w "\n%{http_code}" -H "Content-Type: application/json" -d "$data" "$url$path"
+  curl -sS -L -w "\n%{http_code}" -H "Content-Type: application/json" -d "$data" "$url$path"
 }
 
 extract_body() {
@@ -55,7 +55,7 @@ get_authed() {
   local url=$1
   local token=$2
   local path=$3
-  curl -sS -w "\n%{http_code}" -H "Authorization: Bearer $token" "$url$path"
+  curl -sS -L -w "\n%{http_code}" -H "Authorization: Bearer $token" "$url$path"
 }
 
 compare_authed() {
