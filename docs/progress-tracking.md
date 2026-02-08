@@ -25,6 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-08 | Process / Maintenance | Fixed build errors after reference data rollout (readonly units + inventory lambda) | completed | `/opt/MealPlaner/scripts/app-java-up.sh` | 25d6158 |
 | 2026-02-08 | Functions Unification | Step 5: unified reference data (units/categories/locations) via API and updated UI selectors | completed | Not run (not requested) | f27720b |
 | 2026-02-08 | Functions Unification | Step 4: added purchase location selection when applying to inventory | completed | Not run (not requested) | f27720b |
 | 2026-02-08 | Functions Unification | Step 4: purchases can auto-apply to inventory on create | completed | Not run (not requested) | 4eedffa |
