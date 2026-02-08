@@ -33,8 +33,9 @@ public class DishesController {
   }
 
   @GetMapping
-  public List<DishBase> list() {
-    return dishService.listDishes().stream()
+  public List<DishBase> list(@AuthenticationPrincipal UserPrincipal principal) {
+    String userId = requireUser(principal);
+    return dishService.listDishes(userId).stream()
         .map(this::toDto)
         .toList();
   }
@@ -45,16 +46,20 @@ public class DishesController {
       @RequestBody DishCreate payload,
       @AuthenticationPrincipal UserPrincipal principal
   ) {
+    String userId = requireUser(principal);
     DishDocument doc = toDocument(payload);
-    if (principal != null) {
-      doc.setCreatedBy(principal.getLogin());
-    }
-    DishDocument saved = dishService.upsertDish(doc);
+    doc.setCreatedBy(principal.getLogin());
+    DishDocument saved = dishService.upsertDish(userId, doc);
     return toDto(saved);
   }
 
   @PatchMapping("/{dishId}")
-  public DishBase update(@PathVariable String dishId, @RequestBody DishUpdate payload) {
+  public DishBase update(
+      @PathVariable String dishId,
+      @RequestBody DishUpdate payload,
+      @AuthenticationPrincipal UserPrincipal principal
+  ) {
+    String userId = requireUser(principal);
     DishDocument update = new DishDocument();
     update.setName(payload.getName());
     update.setMeal(payload.getMeal());
@@ -63,7 +68,7 @@ public class DishesController {
       update.setIngredients(payload.getIngredients().stream().map(this::toIngredient).toList());
     }
     try {
-      DishDocument saved = dishService.updateDish(dishId, update);
+      DishDocument saved = dishService.updateDish(userId, dishId, update);
       return toDto(saved);
     } catch (Exception exc) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dish not found");
@@ -72,12 +77,20 @@ public class DishesController {
 
   @DeleteMapping("/{dishId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable String dishId) {
+  public void delete(@PathVariable String dishId, @AuthenticationPrincipal UserPrincipal principal) {
+    String userId = requireUser(principal);
     try {
-      dishService.deleteDish(dishId);
+      dishService.deleteDish(userId, dishId);
     } catch (IllegalStateException exc) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dish not found");
     }
+  }
+
+  private String requireUser(UserPrincipal principal) {
+    if (principal == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Could not validate credentials");
+    }
+    return principal.getId();
   }
 
   private DishDocument toDocument(DishCreate payload) {

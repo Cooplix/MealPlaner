@@ -4,27 +4,28 @@ import com.mealplaner.api.dto.ShoppingListItem;
 import com.mealplaner.dish.DishDocument;
 import com.mealplaner.plan.PlanDocument;
 import com.mealplaner.dish.DishRepository;
-import com.mealplaner.plan.PlanRepository;
+import com.mealplaner.plan.PlanService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ShoppingService {
-  private final PlanRepository planRepository;
+  private final PlanService planService;
   private final DishRepository dishRepository;
 
-  public ShoppingService(PlanRepository planRepository, DishRepository dishRepository) {
-    this.planRepository = planRepository;
+  public ShoppingService(PlanService planService, DishRepository dishRepository) {
+    this.planService = planService;
     this.dishRepository = dishRepository;
   }
 
-  public List<ShoppingListItem> build(String start, String end) {
-    List<PlanDocument> plans = planRepository.findByIdBetweenOrderByIdAsc(start, end);
+  public List<ShoppingListItem> build(String userId, String start, String end) {
+    List<PlanDocument> plans = planService.listPlans(userId, Optional.of(start), Optional.of(end));
     Set<String> dishIds = new HashSet<>();
     Map<String, List<String>> planSlots = new HashMap<>();
 
@@ -36,7 +37,7 @@ public class ShoppingService {
           dishIds.add(dishId);
         }
       }
-      planSlots.put(plan.getId(), slots);
+      planSlots.put(plan.getDateIso() == null ? plan.getId() : plan.getDateIso(), slots);
     }
 
     if (dishIds.isEmpty()) {
@@ -44,7 +45,7 @@ public class ShoppingService {
     }
 
     Map<String, DishDocument> dishes = new HashMap<>();
-    for (DishDocument dish : dishRepository.findAllById(dishIds)) {
+    for (DishDocument dish : dishRepository.findByUserIdAndIdIn(userId, dishIds)) {
       dishes.put(dish.getId(), dish);
     }
 

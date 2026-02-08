@@ -11,6 +11,9 @@ public class DishDocument {
   @Id
   private String id;
 
+  @Field("user_id")
+  private String userId;
+
   private String name;
   private String meal;
   private List<DishIngredient> ingredients = new ArrayList<>();
@@ -27,6 +30,14 @@ public class DishDocument {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public void setUserId(String userId) {
+    this.userId = userId;
   }
 
   public String getName() {

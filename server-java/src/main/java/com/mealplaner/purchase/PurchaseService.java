@@ -23,39 +23,57 @@ public class PurchaseService {
     this.ingredientRepository = ingredientRepository;
   }
 
-  public List<PurchaseDocument> list(Optional<String> start, Optional<String> end, Optional<String> ingredientKey) {
+  public List<PurchaseDocument> list(
+      String userId,
+      Optional<String> start,
+      Optional<String> end,
+      Optional<String> ingredientKey
+  ) {
+    claimUnowned(userId);
     Instant startValue = start.map(value -> parseRange(value, false)).orElse(null);
     Instant endValue = end.map(value -> parseRange(value, true)).orElse(null);
 
     if (ingredientKey.isPresent()) {
       String key = ingredientKey.get().trim();
       if (startValue != null && endValue != null) {
-        return repository.findByIngredientKeyAndPurchasedAtBetweenOrderByPurchasedAtDesc(key, startValue, endValue);
+        return repository.findByUserIdAndIngredientKeyAndPurchasedAtBetweenOrderByPurchasedAtDesc(
+            userId,
+            key,
+            startValue,
+            endValue
+        );
       }
       if (startValue != null) {
-        return repository.findByIngredientKeyAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(key, startValue);
+        return repository.findByUserIdAndIngredientKeyAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(
+            userId,
+            key,
+            startValue
+        );
       }
       if (endValue != null) {
-        return repository.findByIngredientKeyAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(key, endValue);
+        return repository.findByUserIdAndIngredientKeyAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(
+            userId,
+            key,
+            endValue
+        );
       }
-      return repository.findByIngredientKeyOrderByPurchasedAtDesc(key);
+      return repository.findByUserIdAndIngredientKeyOrderByPurchasedAtDesc(userId, key);
     }
 
     if (startValue != null && endValue != null) {
-      return repository.findByPurchasedAtBetweenOrderByPurchasedAtDesc(startValue, endValue);
+      return repository.findByUserIdAndPurchasedAtBetweenOrderByPurchasedAtDesc(userId, startValue, endValue);
     }
     if (startValue != null) {
-      return repository.findByPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(startValue);
+      return repository.findByUserIdAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(userId, startValue);
     }
     if (endValue != null) {
-      return repository.findByPurchasedAtLessThanEqualOrderByPurchasedAtDesc(endValue);
+      return repository.findByUserIdAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(userId, endValue);
     }
-    return repository.findAll().stream()
-        .sorted((a, b) -> b.getPurchasedAt().compareTo(a.getPurchasedAt()))
-        .toList();
+    return repository.findByUserIdOrderByPurchasedAtDesc(userId);
   }
 
   public PurchaseDocument create(
+      String userId,
       String ingredientKey,
       double amount,
       String unit,
@@ -66,9 +84,10 @@ public class PurchaseService {
     if (key.isEmpty()) {
       throw new IllegalArgumentException("Ingredient key is required");
     }
-    IngredientDocument ingredient = ingredientRepository.findByKey(key)
+    IngredientDocument ingredient = ingredientRepository.findByUserIdAndKey(userId, key)
         .orElseThrow(() -> new IllegalStateException("Ingredient not found"));
     PurchaseDocument doc = new PurchaseDocument();
+    doc.setUserId(userId);
     doc.setIngredientKey(key);
     doc.setIngredientName(
         ingredient.getName() == null || ingredient.getName().isBlank()
@@ -103,5 +122,16 @@ public class PurchaseService {
         throw new IllegalArgumentException("Invalid date range value");
       }
     }
+  }
+
+  private void claimUnowned(String userId) {
+    List<PurchaseDocument> legacy = repository.findByUserIdIsNull();
+    if (legacy.isEmpty()) {
+      return;
+    }
+    for (PurchaseDocument doc : legacy) {
+      doc.setUserId(userId);
+    }
+    repository.saveAll(legacy);
   }
 }

@@ -29,26 +29,33 @@ public class DishService {
     this.calorieRepository = calorieRepository;
   }
 
-  public List<DishDocument> listDishes() {
-    List<DishDocument> dishes = new ArrayList<>(repository.findAll());
-    dishes.sort(Comparator.comparing(DishDocument::getId));
-    return dishes;
+  public List<DishDocument> listDishes(String userId) {
+    claimUnowned(userId);
+    return new ArrayList<>(repository.findByUserIdOrderByIdAsc(userId));
   }
 
-  public DishDocument upsertDish(DishDocument dish) {
-    DishDocument existing = repository.findById(dish.getId()).orElse(null);
+  public DishDocument upsertDish(String userId, DishDocument dish) {
+    DishDocument existing = findOwned(userId, dish.getId());
+    if (existing == null && dish.getId() != null && !dish.getId().isBlank()) {
+      DishDocument legacy = repository.findById(dish.getId()).orElse(null);
+      if (legacy != null && (legacy.getUserId() == null || legacy.getUserId().isBlank())) {
+        legacy.setUserId(userId);
+        existing = repository.save(legacy);
+      }
+    }
     if (existing != null) {
       dish.setCreatedBy(existing.getCreatedBy());
     }
+    dish.setUserId(userId);
     dish.setIngredients(normalizeIngredients(dish.getIngredients()));
-    dish.setCalories(computeCalories(dish.getIngredients()));
+    dish.setCalories(computeCalories(userId, dish.getIngredients()));
     DishDocument saved = repository.save(dish);
-    ingredientService.ensureIngredientEntries(saved.getIngredients());
+    ingredientService.ensureIngredientEntries(userId, saved.getIngredients());
     return saved;
   }
 
-  public DishDocument updateDish(String id, DishDocument update) {
-    DishDocument existing = repository.findById(id).orElseThrow();
+  public DishDocument updateDish(String userId, String id, DishDocument update) {
+    DishDocument existing = findOwnedOrClaim(userId, id);
     if (update.getName() != null) {
       existing.setName(update.getName());
     }
@@ -61,17 +68,18 @@ public class DishService {
     if (update.getIngredients() != null) {
       List<DishIngredient> normalized = normalizeIngredients(update.getIngredients());
       existing.setIngredients(normalized);
-      existing.setCalories(computeCalories(normalized));
-      ingredientService.ensureIngredientEntries(normalized);
+      existing.setCalories(computeCalories(userId, normalized));
+      ingredientService.ensureIngredientEntries(userId, normalized);
     }
     return repository.save(existing);
   }
 
-  public void deleteDish(String id) {
-    if (!repository.existsById(id)) {
+  public void deleteDish(String userId, String id) {
+    DishDocument existing = findOwnedOrClaim(userId, id);
+    if (existing == null || existing.getId() == null) {
       throw new IllegalStateException("Dish not found");
     }
-    repository.deleteById(id);
+    repository.deleteById(existing.getId());
   }
 
   private List<DishIngredient> normalizeIngredients(List<DishIngredient> raw) {
@@ -97,7 +105,7 @@ public class DishService {
     return normalized;
   }
 
-  private double computeCalories(List<DishIngredient> ingredients) {
+  private double computeCalories(String userId, List<DishIngredient> ingredients) {
     if (ingredients == null || ingredients.isEmpty()) {
       return 0.0;
     }
@@ -106,7 +114,7 @@ public class DishService {
         .filter(key -> key != null && !key.isBlank())
         .distinct()
         .toList();
-    List<CalorieDocument> entries = calorieRepository.findAllByIngredientKeyIn(keys);
+    List<CalorieDocument> entries = calorieRepository.findAllByUserIdAndIngredientKeyIn(userId, keys);
     Map<String, List<CalorieDocument>> mapping = new HashMap<>();
     for (CalorieDocument doc : entries) {
       String key = doc.getIngredientKey() + "::" + Units.sanitize(doc.getUnit());
@@ -151,5 +159,42 @@ public class DishService {
       return null;
     }
     return IngredientKey.normalize(name, ingredient.getUnit());
+  }
+
+  private DishDocument findOwned(String userId, String id) {
+    if (id == null || id.isBlank()) {
+      return null;
+    }
+    return repository.findByIdAndUserId(id, userId).orElse(null);
+  }
+
+  private DishDocument findOwnedOrClaim(String userId, String id) {
+    DishDocument existing = findOwned(userId, id);
+    if (existing != null) {
+      return existing;
+    }
+    if (id == null || id.isBlank()) {
+      throw new IllegalStateException("Dish not found");
+    }
+    DishDocument legacy = repository.findById(id).orElse(null);
+    if (legacy == null) {
+      throw new IllegalStateException("Dish not found");
+    }
+    if (legacy.getUserId() != null && !legacy.getUserId().isBlank()) {
+      throw new IllegalStateException("Dish not found");
+    }
+    legacy.setUserId(userId);
+    return repository.save(legacy);
+  }
+
+  private void claimUnowned(String userId) {
+    List<DishDocument> legacy = repository.findByUserIdIsNull();
+    if (legacy.isEmpty()) {
+      return;
+    }
+    for (DishDocument dish : legacy) {
+      dish.setUserId(userId);
+    }
+    repository.saveAll(legacy);
   }
 }

@@ -5,21 +5,30 @@ import java.util.List;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface PurchaseRepository extends MongoRepository<PurchaseDocument, String> {
-  List<PurchaseDocument> findByPurchasedAtBetweenOrderByPurchasedAtDesc(Instant start, Instant end);
-  List<PurchaseDocument> findByPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(Instant start);
-  List<PurchaseDocument> findByPurchasedAtLessThanEqualOrderByPurchasedAtDesc(Instant end);
-  List<PurchaseDocument> findByIngredientKeyOrderByPurchasedAtDesc(String ingredientKey);
-  List<PurchaseDocument> findByIngredientKeyAndPurchasedAtBetweenOrderByPurchasedAtDesc(
+  List<PurchaseDocument> findByUserIdAndPurchasedAtBetweenOrderByPurchasedAtDesc(
+      String userId,
+      Instant start,
+      Instant end
+  );
+  List<PurchaseDocument> findByUserIdAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(String userId, Instant start);
+  List<PurchaseDocument> findByUserIdAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(String userId, Instant end);
+  List<PurchaseDocument> findByUserIdOrderByPurchasedAtDesc(String userId);
+  List<PurchaseDocument> findByUserIdAndIngredientKeyOrderByPurchasedAtDesc(String userId, String ingredientKey);
+  List<PurchaseDocument> findByUserIdAndIngredientKeyAndPurchasedAtBetweenOrderByPurchasedAtDesc(
+      String userId,
       String ingredientKey,
       Instant start,
       Instant end
   );
-  List<PurchaseDocument> findByIngredientKeyAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(
+  List<PurchaseDocument> findByUserIdAndIngredientKeyAndPurchasedAtGreaterThanEqualOrderByPurchasedAtDesc(
+      String userId,
       String ingredientKey,
       Instant start
   );
-  List<PurchaseDocument> findByIngredientKeyAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(
+  List<PurchaseDocument> findByUserIdAndIngredientKeyAndPurchasedAtLessThanEqualOrderByPurchasedAtDesc(
+      String userId,
       String ingredientKey,
       Instant end
   );
+  List<PurchaseDocument> findByUserIdIsNull();
 }

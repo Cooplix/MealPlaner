@@ -9,6 +9,9 @@ public class CalorieDocument {
   @Id
   private String id;
 
+  @Field("user_id")
+  private String userId;
+
   @Field("ingredient_key")
   private String ingredientKey;
 
@@ -25,6 +28,14 @@ public class CalorieDocument {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public void setUserId(String userId) {
+    this.userId = userId;
   }
 
   public String getIngredientKey() {

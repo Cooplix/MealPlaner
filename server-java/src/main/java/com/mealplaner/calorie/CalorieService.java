@@ -18,21 +18,23 @@ public class CalorieService {
     this.ingredientRepository = ingredientRepository;
   }
 
-  public List<CalorieDocument> listAll() {
-    return repository.findAll().stream()
+  public List<CalorieDocument> listAll(String userId) {
+    claimUnowned(userId);
+    return repository.findByUserId(userId).stream()
         .sorted(Comparator.comparing(CalorieDocument::getIngredientName, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(CalorieDocument::getUnit)
             .thenComparingDouble(CalorieDocument::getAmount))
         .toList();
   }
 
-  public CalorieDocument create(String ingredientKey, double amount, String unit, double calories) {
+  public CalorieDocument create(String userId, String ingredientKey, double amount, String unit, double calories) {
     String safeUnit = Units.sanitize(unit);
-    Optional<IngredientDocument> ingredient = ingredientRepository.findByKey(ingredientKey);
+    Optional<IngredientDocument> ingredient = ingredientRepository.findByUserIdAndKey(userId, ingredientKey);
     if (ingredient.isEmpty()) {
       throw new IllegalStateException("Ingredient not found");
     }
-    Optional<CalorieDocument> duplicate = repository.findByIngredientKeyAndUnitAndAmount(
+    Optional<CalorieDocument> duplicate = repository.findByUserIdAndIngredientKeyAndUnitAndAmount(
+        userId,
         ingredientKey,
         safeUnit,
         amount
@@ -41,6 +43,7 @@ public class CalorieService {
       throw new IllegalStateException("Calorie entry already exists");
     }
     CalorieDocument doc = new CalorieDocument();
+    doc.setUserId(userId);
     doc.setIngredientKey(ingredientKey);
     doc.setIngredientName(
         ingredient.get().getName() == null || ingredient.get().getName().isBlank()
@@ -53,11 +56,18 @@ public class CalorieService {
     return repository.save(doc);
   }
 
-  public CalorieDocument update(CalorieDocument existing, String ingredientKey, Double amount, String unit, Double calories) {
+  public CalorieDocument update(
+      String userId,
+      CalorieDocument existing,
+      String ingredientKey,
+      Double amount,
+      String unit,
+      Double calories
+  ) {
     String targetKey = ingredientKey == null ? existing.getIngredientKey() : ingredientKey.trim();
     IngredientDocument ingredient = null;
     if (ingredientKey != null) {
-      ingredient = ingredientRepository.findByKey(targetKey)
+      ingredient = ingredientRepository.findByUserIdAndKey(userId, targetKey)
           .orElseThrow(() -> new IllegalStateException("Ingredient not found"));
       existing.setIngredientKey(targetKey);
       existing.setIngredientName(
@@ -77,7 +87,8 @@ public class CalorieService {
       existing.setCalories(calories);
     }
 
-    Optional<CalorieDocument> duplicate = repository.findByIngredientKeyAndUnitAndAmount(
+    Optional<CalorieDocument> duplicate = repository.findByUserIdAndIngredientKeyAndUnitAndAmount(
+        userId,
         existing.getIngredientKey(),
         existing.getUnit(),
         existing.getAmount()
@@ -86,5 +97,16 @@ public class CalorieService {
       throw new IllegalStateException("Calorie entry already exists");
     }
     return repository.save(existing);
+  }
+
+  private void claimUnowned(String userId) {
+    List<CalorieDocument> legacy = repository.findByUserIdIsNull();
+    if (legacy.isEmpty()) {
+      return;
+    }
+    for (CalorieDocument doc : legacy) {
+      doc.setUserId(userId);
+    }
+    repository.saveAll(legacy);
   }
 }

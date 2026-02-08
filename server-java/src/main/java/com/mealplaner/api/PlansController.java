@@ -1,6 +1,7 @@
 package com.mealplaner.api;
 
 import com.mealplaner.api.dto.DayPlan;
+import com.mealplaner.auth.UserPrincipal;
 import com.mealplaner.plan.PlanDocument;
 import com.mealplaner.plan.PlanService;
 import java.time.LocalDate;
@@ -8,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,34 +33,42 @@ public class PlansController {
   @GetMapping
   public List<DayPlan> list(
       @RequestParam(required = false) String start,
-      @RequestParam(required = false) String end
+      @RequestParam(required = false) String end,
+      @AuthenticationPrincipal UserPrincipal principal
   ) {
+    String userId = requireUser(principal);
     validateDate(start);
     validateDate(end);
-    return planService.listPlans(Optional.ofNullable(start), Optional.ofNullable(end)).stream()
+    return planService.listPlans(userId, Optional.ofNullable(start), Optional.ofNullable(end)).stream()
         .map(this::toDto)
         .toList();
   }
 
   @PutMapping("/{dateISO}")
-  public DayPlan upsert(@PathVariable String dateISO, @RequestBody DayPlan payload) {
+  public DayPlan upsert(
+      @PathVariable String dateISO,
+      @RequestBody DayPlan payload,
+      @AuthenticationPrincipal UserPrincipal principal
+  ) {
+    String userId = requireUser(principal);
     validateDate(dateISO);
     if (payload.getDateISO() == null || !payload.getDateISO().equals(dateISO)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Path date and payload date mismatch");
     }
     PlanDocument plan = new PlanDocument();
-    plan.setId(payload.getDateISO());
+    plan.setDateIso(payload.getDateISO());
     plan.setSlots(payload.getSlots());
-    PlanDocument saved = planService.upsert(plan);
+    PlanDocument saved = planService.upsert(userId, plan);
     return toDto(saved);
   }
 
   @DeleteMapping("/{dateISO}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable String dateISO) {
+  public void delete(@PathVariable String dateISO, @AuthenticationPrincipal UserPrincipal principal) {
+    String userId = requireUser(principal);
     validateDate(dateISO);
     try {
-      planService.delete(dateISO);
+      planService.delete(userId, dateISO);
     } catch (IllegalStateException exc) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan not found");
     }
@@ -77,8 +87,15 @@ public class PlansController {
 
   private DayPlan toDto(PlanDocument plan) {
     DayPlan dto = new DayPlan();
-    dto.setDateISO(plan.getId());
+    dto.setDateISO(plan.getDateIso() == null ? plan.getId() : plan.getDateIso());
     dto.setSlots(plan.getSlots());
     return dto;
+  }
+
+  private String requireUser(UserPrincipal principal) {
+    if (principal == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Could not validate credentials");
+    }
+    return principal.getId();
   }
 }

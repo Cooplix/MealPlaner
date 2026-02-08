@@ -2,6 +2,7 @@ package com.mealplaner.api;
 
 import com.mealplaner.api.dto.PurchaseCreate;
 import com.mealplaner.api.dto.PurchaseEntry;
+import com.mealplaner.auth.UserPrincipal;
 import com.mealplaner.purchase.PurchaseDocument;
 import com.mealplaner.purchase.PurchaseService;
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,10 +33,13 @@ public class PurchasesController {
   public List<PurchaseEntry> list(
       @RequestParam(required = false) String start,
       @RequestParam(required = false) String end,
-      @RequestParam(required = false, name = "ingredientKey") String ingredientKey
+      @RequestParam(required = false, name = "ingredientKey") String ingredientKey,
+      @AuthenticationPrincipal UserPrincipal principal
   ) {
+    String userId = requireUser(principal);
     try {
       return purchaseService.list(
+          userId,
           Optional.ofNullable(start),
           Optional.ofNullable(end),
           Optional.ofNullable(ingredientKey)
@@ -46,9 +51,14 @@ public class PurchasesController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PurchaseEntry create(@RequestBody PurchaseCreate payload) {
+  public PurchaseEntry create(
+      @RequestBody PurchaseCreate payload,
+      @AuthenticationPrincipal UserPrincipal principal
+  ) {
+    String userId = requireUser(principal);
     try {
       PurchaseDocument saved = purchaseService.create(
+          userId,
           payload.getIngredientKey(),
           payload.getAmount(),
           payload.getUnit(),
@@ -61,6 +71,13 @@ public class PurchasesController {
     } catch (IllegalStateException exc) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, exc.getMessage());
     }
+  }
+
+  private String requireUser(UserPrincipal principal) {
+    if (principal == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Could not validate credentials");
+    }
+    return principal.getId();
   }
 
   private PurchaseEntry toEntry(PurchaseDocument doc) {

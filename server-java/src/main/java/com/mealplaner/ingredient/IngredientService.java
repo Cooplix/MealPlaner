@@ -32,8 +32,9 @@ public class IngredientService {
     this.mongoTemplate = mongoTemplate;
   }
 
-  public List<IngredientDocument> listIngredients() {
-    List<IngredientDocument> items = new ArrayList<>(repository.findAll());
+  public List<IngredientDocument> listIngredients(String userId) {
+    claimUnowned(userId);
+    List<IngredientDocument> items = new ArrayList<>(repository.findByUserIdOrderByNameAsc(userId));
     items.sort(Comparator.comparing(IngredientDocument::getName, String.CASE_INSENSITIVE_ORDER));
     boolean changed = false;
     for (IngredientDocument doc : items) {
@@ -53,18 +54,19 @@ public class IngredientService {
     return items;
   }
 
-  public IngredientDocument createIngredient(String name, String unit, Map<String, String> translations) {
+  public IngredientDocument createIngredient(String userId, String name, String unit, Map<String, String> translations) {
     String safeName = name == null ? "" : name.trim();
     String safeUnit = Units.sanitize(unit);
     if (safeName.isEmpty()) {
       throw new IllegalArgumentException("Name and unit are required");
     }
     String key = IngredientKey.normalize(safeName, safeUnit);
-    Optional<IngredientDocument> existing = repository.findByKey(key);
+    Optional<IngredientDocument> existing = repository.findByUserIdAndKey(userId, key);
     if (existing.isPresent()) {
       throw new IllegalStateException("Ingredient already exists");
     }
     IngredientDocument doc = new IngredientDocument();
+    doc.setUserId(userId);
     doc.setKey(key);
     doc.setName(safeName);
     doc.setUnit(safeUnit);
@@ -72,17 +74,18 @@ public class IngredientService {
     return repository.save(doc);
   }
 
-  public IngredientDocument updateIngredient(String key, String name, String unit, Map<String, String> translations) {
+  public IngredientDocument updateIngredient(String userId, String key, String name, String unit, Map<String, String> translations) {
+    claimUnowned(userId);
     String safeName = name == null ? "" : name.trim();
     String safeUnit = Units.sanitize(unit);
     String newKey = IngredientKey.normalize(safeName, safeUnit);
 
-    Optional<IngredientDocument> existing = repository.findByKey(newKey);
+    Optional<IngredientDocument> existing = repository.findByUserIdAndKey(userId, newKey);
     if (existing.isPresent() && !existing.get().getKey().equals(key)) {
       throw new IllegalStateException("Ingredient already exists");
     }
 
-    IngredientDocument target = repository.findByKey(key).orElseThrow();
+    IngredientDocument target = repository.findByUserIdAndKey(userId, key).orElseThrow();
     target.setName(safeName);
     target.setUnit(safeUnit);
     target.setTranslations(cleanTranslations(translations));
@@ -92,13 +95,13 @@ public class IngredientService {
     IngredientDocument saved = repository.save(target);
 
     if (!newKey.equals(key)) {
-      Query query = new Query(Criteria.where("ingredient_key").is(key));
+      Query query = new Query(Criteria.where("user_id").is(userId).and("ingredient_key").is(key));
       Update update = new Update()
           .set("ingredient_key", newKey)
           .set("ingredient_name", safeName);
       mongoTemplate.updateMulti(query, update, CalorieDocument.class);
     } else {
-      Query query = new Query(Criteria.where("ingredient_key").is(key));
+      Query query = new Query(Criteria.where("user_id").is(userId).and("ingredient_key").is(key));
       Update update = new Update().set("ingredient_name", safeName);
       mongoTemplate.updateMulti(query, update, CalorieDocument.class);
     }
@@ -106,11 +109,12 @@ public class IngredientService {
     return saved;
   }
 
-  public Optional<IngredientDocument> findByKey(String key) {
-    return repository.findByKey(key);
+  public Optional<IngredientDocument> findByKey(String userId, String key) {
+    claimUnowned(userId);
+    return repository.findByUserIdAndKey(userId, key);
   }
 
-  public void ensureIngredientEntries(List<com.mealplaner.dish.DishIngredient> ingredients) {
+  public void ensureIngredientEntries(String userId, List<com.mealplaner.dish.DishIngredient> ingredients) {
     if (ingredients == null) {
       return;
     }
@@ -126,8 +130,9 @@ public class IngredientService {
       } else {
         key = IngredientKey.normalize(name, unit);
       }
-      Optional<IngredientDocument> existing = repository.findByKey(key);
+      Optional<IngredientDocument> existing = repository.findByUserIdAndKey(userId, key);
       IngredientDocument doc = existing.orElseGet(IngredientDocument::new);
+      doc.setUserId(userId);
       doc.setKey(key);
       doc.setName(name);
       doc.setUnit(unit);
@@ -149,5 +154,16 @@ public class IngredientService {
             Map.Entry::getKey,
             entry -> entry.getValue().trim()
         ));
+  }
+
+  private void claimUnowned(String userId) {
+    List<IngredientDocument> legacy = repository.findByUserIdIsNull();
+    if (legacy.isEmpty()) {
+      return;
+    }
+    for (IngredientDocument doc : legacy) {
+      doc.setUserId(userId);
+    }
+    repository.saveAll(legacy);
   }
 }
