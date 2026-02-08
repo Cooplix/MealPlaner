@@ -625,6 +625,9 @@ function App() {
                         <ShoppingPage
                             fetchList={fetchShoppingList}
                             ingredientOptions={ingredientOptions}
+                            categories={referenceCategories}
+                            locations={referenceLocations}
+                            onCreatePurchase={handleCreatePurchase}
                         />
                     )}
                     {activeTab === "ingredients" && (
