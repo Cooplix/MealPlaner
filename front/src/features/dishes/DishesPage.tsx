@@ -96,12 +96,20 @@ export function DishesPage({
         return false;
       }
       if (!q) return true;
-      return (
-        dish.name.toLowerCase().includes(q) ||
-        dish.ingredients.some((ingredient) => ingredient.name.toLowerCase().includes(q))
-      );
+      const nameMatches = dish.name.toLowerCase().includes(q);
+      if (nameMatches) return true;
+      return dish.ingredients.some((ingredient) => {
+        const ingredientName = ingredient.name?.toLowerCase() ?? "";
+        if (ingredientName.includes(q)) return true;
+        const option = getOptionForIngredient(ingredient);
+        if (!option) return false;
+        if (option.name.toLowerCase().includes(q)) return true;
+        return Object.values(option.translations ?? {}).some((value) =>
+          value.toLowerCase().includes(q),
+        );
+      });
     });
-  }, [query, dishes, mealFilter]);
+  }, [query, dishes, mealFilter, getOptionForIngredient]);
 
   async function saveDish(dish: Dish) {
     setBusyId(dish.id);
