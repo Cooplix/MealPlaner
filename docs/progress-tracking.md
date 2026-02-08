@@ -17,7 +17,7 @@ Single source of truth for implementation progress across all active plans.
 | Track | Source Doc | Current Step | Status | Next Action |
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
-| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 9 | in_progress | Run migration endpoint (dry run then apply) |
+| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 10 | planned | E2E smoke + API integration checks |
 | UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 1 | planned | UI audit and token spec |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
@@ -25,7 +25,8 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
-| 2026-02-08 | Functions Unification | Step 9: migration runner (user_id + ingredientKey backfill, optional inventory backfill) | in_progress | Not run (not requested) | bb54846 |
+| 2026-02-08 | Functions Unification | Step 9: ran migration (inventory ingredientKey backfill + localized unit normalization) | completed | `POST /api/migrations/step-9` (dry run + apply) | fd1d7c4 |
+| 2026-02-08 | Functions Unification | Step 9: migration runner (user_id + ingredientKey backfill, optional inventory backfill) | completed | Not run (not requested) | bb54846 |
 | 2026-02-08 | Functions Unification | Step 8: unified events feed with priorities (expiry/restock/critical/expensive) | completed | Not run (not requested) | a92fd51 |
 | 2026-02-08 | Functions Unification | Step 7: backend analytics aggregation + frontend analytics views | completed | Not run (not requested) | 5a7fbd5 |
 | 2026-02-08 | Functions Unification | Step 6: shopping list grouped by category with purchase builder + auto-refresh | completed | Not run (not requested) | 05b6803 |
