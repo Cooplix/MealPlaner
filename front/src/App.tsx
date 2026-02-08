@@ -651,7 +651,7 @@ function App() {
                         />
                     )}
                     {activeTab === "inventory" && (
-                        <InventoryPage />
+                        <InventoryPage ingredientOptions={ingredientOptions} />
                     )}
                 </div>
             </main>

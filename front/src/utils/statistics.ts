@@ -242,10 +242,11 @@ export function calculateDishCosts(
     const ingredientCosts: DishCostSummary["ingredients"] = [];
 
     dish.ingredients.forEach((ingredient) => {
-      const keyCandidates = [
-        `${ingredient.name.trim().toLowerCase()}__${ingredient.unit.trim().toLowerCase()}`,
-      ];
-      const matchingOption = optionMap.get(keyCandidates[0]);
+      const fallbackKey = `${ingredient.name.trim().toLowerCase()}__${ingredient.unit.trim().toLowerCase()}`;
+      const resolvedKey = ingredient.ingredientKey?.trim()
+        ? ingredient.ingredientKey.trim().toLowerCase()
+        : fallbackKey;
+      const matchingOption = optionMap.get(resolvedKey) ?? optionMap.get(fallbackKey);
       if (!matchingOption) {
         missing.push({ ingredient: ingredient.name, unit: ingredient.unit });
         return;

@@ -78,8 +78,19 @@ public class DishService {
     List<DishIngredient> normalized = new ArrayList<>();
     for (DishIngredient item : raw == null ? List.<DishIngredient>of() : raw) {
       DishIngredient ingredient = new DishIngredient();
-      ingredient.setName(item.getName() == null ? "" : item.getName().trim());
-      ingredient.setUnit(Units.sanitize(item.getUnit()));
+      String name = item.getName() == null ? "" : item.getName().trim();
+      String unit = Units.sanitize(item.getUnit());
+      String key = item.getIngredientKey();
+      if (key != null && !key.isBlank()) {
+        key = key.trim().toLowerCase();
+      } else if (!name.isBlank()) {
+        key = IngredientKey.normalize(name, unit);
+      } else {
+        key = null;
+      }
+      ingredient.setIngredientKey(key);
+      ingredient.setName(name);
+      ingredient.setUnit(unit);
       ingredient.setQty(Math.max(item.getQty(), 0.0));
       normalized.add(ingredient);
     }
@@ -91,7 +102,8 @@ public class DishService {
       return 0.0;
     }
     List<String> keys = ingredients.stream()
-        .map(ingredient -> IngredientKey.normalize(ingredient.getName(), ingredient.getUnit()))
+        .map(this::resolveIngredientKey)
+        .filter(key -> key != null && !key.isBlank())
         .distinct()
         .toList();
     List<CalorieDocument> entries = calorieRepository.findAllByIngredientKeyIn(keys);
@@ -103,7 +115,10 @@ public class DishService {
 
     double total = 0.0;
     for (DishIngredient ingredient : ingredients) {
-      String key = IngredientKey.normalize(ingredient.getName(), ingredient.getUnit());
+      String key = resolveIngredientKey(ingredient);
+      if (key == null || key.isBlank()) {
+        continue;
+      }
       List<CalorieDocument> candidates = mapping.get(key + "::" + Units.sanitize(ingredient.getUnit()));
       if (candidates == null || candidates.isEmpty()) {
         continue;
@@ -121,5 +136,20 @@ public class DishService {
       total += (ingredient.getQty() / entry.getAmount()) * entry.getCalories();
     }
     return total;
+  }
+
+  private String resolveIngredientKey(DishIngredient ingredient) {
+    if (ingredient == null) {
+      return null;
+    }
+    String raw = ingredient.getIngredientKey();
+    if (raw != null && !raw.isBlank()) {
+      return raw.trim().toLowerCase();
+    }
+    String name = ingredient.getName();
+    if (name == null || name.trim().isEmpty()) {
+      return null;
+    }
+    return IngredientKey.normalize(name, ingredient.getUnit());
   }
 }

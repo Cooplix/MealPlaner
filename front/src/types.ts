@@ -2,6 +2,7 @@ export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface Ingredient {
   id: string;
+  ingredientKey?: string;
   name: string;
   unit: string;
   qty: number;

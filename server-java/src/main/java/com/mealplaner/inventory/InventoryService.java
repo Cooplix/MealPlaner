@@ -1,5 +1,7 @@
 package com.mealplaner.inventory;
 
+import com.mealplaner.util.IngredientKey;
+import com.mealplaner.util.Units;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -24,12 +26,15 @@ public class InventoryService {
   }
 
   public InventoryItemDocument createItem(String userId, InventoryItemDocument doc) {
-    doc.setName(requireValue(doc.getName(), "Name is required"));
-    doc.setUnit(requireValue(doc.getUnit(), "Unit is required"));
+    String name = requireValue(doc.getName(), "Name is required");
+    String unit = requireValue(doc.getUnit(), "Unit is required");
+    doc.setName(name);
+    doc.setUnit(unit);
     doc.setBaseName(normalizeOptional(doc.getBaseName()));
     doc.setCategory(normalizeOptional(doc.getCategory()));
     doc.setLocation(normalizeOptional(doc.getLocation()));
     doc.setNotes(normalizeOptional(doc.getNotes()));
+    doc.setIngredientKey(normalizeIngredientKey(doc.getIngredientKey(), name, unit));
     validate(doc);
     doc.setUserId(userId);
     if (doc.getAddedAt() == null) {
@@ -41,6 +46,7 @@ public class InventoryService {
   public InventoryItemDocument updateItem(
       String userId,
       String id,
+      String ingredientKey,
       String name,
       String baseName,
       String category,
@@ -53,8 +59,11 @@ public class InventoryService {
       String notes
   ) {
     InventoryItemDocument existing = repository.findByIdAndUserId(id, userId).orElseThrow();
+    boolean nameChanged = false;
+    boolean unitChanged = false;
     if (name != null) {
       existing.setName(requireValue(name, "Name is required"));
+      nameChanged = true;
     }
     if (baseName != null) {
       existing.setBaseName(normalizeOptional(baseName));
@@ -67,6 +76,7 @@ public class InventoryService {
     }
     if (unit != null) {
       existing.setUnit(requireValue(unit, "Unit is required"));
+      unitChanged = true;
     }
     if (quantity != null) {
       existing.setQuantity(quantity);
@@ -82,6 +92,12 @@ public class InventoryService {
     }
     if (notes != null) {
       existing.setNotes(normalizeOptional(notes));
+    }
+    if (ingredientKey != null) {
+      existing.setIngredientKey(normalizeIngredientKey(ingredientKey, existing.getName(), existing.getUnit()));
+    }
+    if (ingredientKey == null && (nameChanged || unitChanged)) {
+      existing.setIngredientKey(normalizeIngredientKey(null, existing.getName(), existing.getUnit()));
     }
     validate(existing);
     return repository.save(existing);
@@ -130,5 +146,19 @@ public class InventoryService {
       throw new IllegalArgumentException(message);
     }
     return trimmed;
+  }
+
+  private String normalizeIngredientKey(String ingredientKey, String name, String unit) {
+    if (ingredientKey != null && !ingredientKey.isBlank()) {
+      return ingredientKey.trim().toLowerCase();
+    }
+    if (name == null || name.trim().isEmpty() || unit == null || unit.trim().isEmpty()) {
+      return null;
+    }
+    String normalizedUnit = Units.sanitize(unit);
+    if (!normalizedUnit.equals(unit.trim().toLowerCase())) {
+      return null;
+    }
+    return IngredientKey.normalize(name, unit);
   }
 }

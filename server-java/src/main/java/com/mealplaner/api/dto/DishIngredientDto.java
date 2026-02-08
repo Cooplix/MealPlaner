@@ -1,9 +1,18 @@
 package com.mealplaner.api.dto;
 
 public class DishIngredientDto {
+  private String ingredientKey;
   private String name;
   private String unit;
   private double qty;
+
+  public String getIngredientKey() {
+    return ingredientKey;
+  }
+
+  public void setIngredientKey(String ingredientKey) {
+    this.ingredientKey = ingredientKey;
+  }
 
   public String getName() {
     return name;

@@ -3,6 +3,7 @@ package com.mealplaner.api.dto;
 import java.time.LocalDateTime;
 
 public class InventoryItemUpdate {
+  private String ingredientKey;
   private String name;
   private String baseName;
   private String category;
@@ -16,6 +17,14 @@ public class InventoryItemUpdate {
 
   public String getName() {
     return name;
+  }
+
+  public String getIngredientKey() {
+    return ingredientKey;
+  }
+
+  public void setIngredientKey(String ingredientKey) {
+    this.ingredientKey = ingredientKey;
   }
 
   public void setName(String name) {

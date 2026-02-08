@@ -94,6 +94,7 @@ public class DishesController {
 
   private DishIngredient toIngredient(DishIngredientDto dto) {
     DishIngredient ingredient = new DishIngredient();
+    ingredient.setIngredientKey(dto.getIngredientKey());
     ingredient.setName(dto.getName());
     ingredient.setUnit(dto.getUnit());
     ingredient.setQty(dto.getQty());
@@ -114,6 +115,7 @@ public class DishesController {
 
   private DishIngredientDto toDtoIngredient(DishIngredient ingredient) {
     DishIngredientDto dto = new DishIngredientDto();
+    dto.setIngredientKey(ingredient.getIngredientKey());
     dto.setName(ingredient.getName());
     dto.setUnit(Units.sanitize(ingredient.getUnit()));
     dto.setQty(ingredient.getQty());

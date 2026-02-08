@@ -3,6 +3,7 @@ export type RestockStatus = "OK" | "RESTOCK";
 
 export interface InventoryItem {
   id: string;
+  ingredientKey?: string | null;
   name: string;
   baseName?: string | null;
   category?: string | null;
@@ -40,6 +41,7 @@ export interface PetFoodItem {
 }
 
 export interface InventoryItemCreate {
+  ingredientKey?: string | null;
   name: string;
   baseName?: string | null;
   category?: string | null;

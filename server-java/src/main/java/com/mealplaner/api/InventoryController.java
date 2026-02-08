@@ -77,6 +77,7 @@ public class InventoryController {
       InventoryItemDocument updated = inventoryService.updateItem(
           userId,
           id,
+          payload.getIngredientKey(),
           payload.getName(),
           payload.getBaseName(),
           payload.getCategory(),
@@ -137,6 +138,7 @@ public class InventoryController {
   private InventoryItemEntry toEntry(InventoryItemDocument doc) {
     InventoryItemEntry entry = new InventoryItemEntry();
     entry.setId(doc.getId());
+    entry.setIngredientKey(doc.getIngredientKey());
     entry.setName(doc.getName());
     entry.setBaseName(doc.getBaseName());
     entry.setCategory(doc.getCategory());
@@ -153,6 +155,7 @@ public class InventoryController {
 
   private InventoryItemDocument toDocument(InventoryItemCreate payload) {
     InventoryItemDocument doc = new InventoryItemDocument();
+    doc.setIngredientKey(payload.getIngredientKey());
     doc.setName(payload.getName());
     doc.setBaseName(payload.getBaseName());
     doc.setCategory(payload.getCategory());

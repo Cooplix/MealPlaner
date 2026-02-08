@@ -1,9 +1,21 @@
 package com.mealplaner.dish;
 
+import org.springframework.data.mongodb.core.mapping.Field;
+
 public class DishIngredient {
+  @Field("ingredient_key")
+  private String ingredientKey;
   private String name;
   private String unit;
   private double qty;
+
+  public String getIngredientKey() {
+    return ingredientKey;
+  }
+
+  public void setIngredientKey(String ingredientKey) {
+    this.ingredientKey = ingredientKey;
+  }
 
   public String getName() {
     return name;

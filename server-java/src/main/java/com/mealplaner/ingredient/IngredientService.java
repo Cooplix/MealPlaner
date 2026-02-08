@@ -120,7 +120,12 @@ public class IngredientService {
       if (name.isEmpty()) {
         continue;
       }
-      String key = IngredientKey.normalize(name, unit);
+      String key = ingredient.getIngredientKey();
+      if (key != null && !key.isBlank()) {
+        key = key.trim().toLowerCase();
+      } else {
+        key = IngredientKey.normalize(name, unit);
+      }
       Optional<IngredientDocument> existing = repository.findByKey(key);
       IngredientDocument doc = existing.orElseGet(IngredientDocument::new);
       doc.setKey(key);

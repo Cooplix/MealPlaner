@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class InventoryItemEntry {
   private String id;
+  private String ingredientKey;
   private String name;
   private String baseName;
   private String category;
@@ -22,6 +23,14 @@ public class InventoryItemEntry {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getIngredientKey() {
+    return ingredientKey;
+  }
+
+  public void setIngredientKey(String ingredientKey) {
+    this.ingredientKey = ingredientKey;
   }
 
   public String getName() {

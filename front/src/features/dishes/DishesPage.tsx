@@ -4,6 +4,7 @@ import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { DayPlan, Dish, Ingredient, IngredientOption, MealSlot } from "../../types";
+import { findIngredientOption } from "../../utils/ingredientNames";
 import { uid } from "../../utils/id";
 
 interface DishesPageProps {
@@ -14,6 +15,22 @@ interface DishesPageProps {
   ingredientOptions: IngredientOption[];
 }
 
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function buildIngredientKey(name: string, unit: string): string {
+  return `${normalizeKey(name)}__${normalizeKey(unit)}`;
+}
+
+function resolveIngredientKey(ingredient: Ingredient): string | null {
+  if (ingredient.ingredientKey && ingredient.ingredientKey.trim()) {
+    return normalizeKey(ingredient.ingredientKey);
+  }
+  if (!ingredient.name || !ingredient.unit) return null;
+  return buildIngredientKey(ingredient.name, ingredient.unit);
+}
+
 export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredientOptions }: DishesPageProps) {
   const [editing, setEditing] = useState<Dish | null>(null);
   const [query, setQuery] = useState("");
@@ -21,14 +38,19 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
   const { t, language } = useTranslation();
 
+  const optionMap = useMemo(() => {
+    const map = new Map<string, IngredientOption>();
+    ingredientOptions.forEach((option) => map.set(normalizeKey(option.key), option));
+    return map;
+  }, [ingredientOptions]);
+
   const getOptionForIngredient = useCallback(
-    (ingredient: Ingredient) =>
-      ingredientOptions.find(
-        (option) =>
-          option.name.toLowerCase() === ingredient.name.toLowerCase() &&
-          option.unit.toLowerCase() === ingredient.unit.toLowerCase(),
-      ),
-    [ingredientOptions],
+    (ingredient: Ingredient) => {
+      const key = resolveIngredientKey(ingredient);
+      if (!key) return undefined;
+      return optionMap.get(key);
+    },
+    [optionMap],
   );
 
   const ingredientDisplayName = useCallback(
@@ -216,14 +238,14 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
   const optionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
     ingredientOptions.forEach((option) => {
-      map.set(`${option.name.toLowerCase()}__${option.unit.toLowerCase()}`, option);
+      map.set(normalizeKey(option.key), option);
     });
     return map;
   }, [ingredientOptions]);
 
   function displayNameForIngredient(ingredient: Ingredient): string {
-    const key = `${ingredient.name.toLowerCase()}__${ingredient.unit.toLowerCase()}`;
-    const option = optionMap.get(key);
+    const key = resolveIngredientKey(ingredient);
+    const option = key ? optionMap.get(key) : undefined;
     if (option && ingredient.name === option.name) {
       const localized = option.translations[language];
       if (localized && localized.trim().length > 0) return localized;
@@ -237,9 +259,9 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
 
   const availableExisting = useMemo(() => {
     const usedKeys = new Set(
-      state.ingredients.map((ingredient) =>
-        `${ingredient.name.toLowerCase()}__${ingredient.unit.toLowerCase()}`,
-      ),
+      state.ingredients
+        .map((ingredient) => resolveIngredientKey(ingredient))
+        .filter((key): key is string => Boolean(key)),
     );
     return ingredientOptions.filter((option) => !usedKeys.has(option.key));
   }, [ingredientOptions, state.ingredients]);
@@ -249,7 +271,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
       ...prev,
       ingredients: [
         ...prev.ingredients,
-        { id: uid("ing"), name: "", unit: MEASUREMENT_UNITS[0], qty: 100 },
+        { id: uid("ing"), name: "", unit: MEASUREMENT_UNITS[0], qty: 100, ingredientKey: undefined },
       ],
     }));
   }
@@ -267,6 +289,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
           name: option.name,
           unit: option.unit,
           qty: 1,
+          ingredientKey: option.key,
         },
       ],
     }));
@@ -274,13 +297,9 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
   }
 
   function findMatchingOption(value: string): IngredientOption | undefined {
-    const normalized = value.trim().toLowerCase();
+    const normalized = value.trim();
     if (!normalized) return undefined;
-    return ingredientOptions.find((option) => {
-      if (option.name.toLowerCase() === normalized) return true;
-      const translation = option.translations[language];
-      return translation ? translation.toLowerCase() === normalized : false;
-    });
+    return findIngredientOption(ingredientOptions, normalized);
   }
 
   function handleNameChange(id: string, value: string) {
@@ -294,9 +313,10 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
             ...ingredient,
             name: match.name,
             unit: match.unit,
+            ingredientKey: match.key,
           };
         }
-        return { ...ingredient, name: value };
+        return { ...ingredient, name: value, ingredientKey: undefined };
       }),
     }));
   }
@@ -319,9 +339,22 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
   function updateIngredient(id: string, patch: Partial<Ingredient>) {
     setState((prev) => ({
       ...prev,
-      ingredients: prev.ingredients.map((ingredient) =>
-        ingredient.id === id ? { ...ingredient, ...patch } : ingredient,
-      ),
+      ingredients: prev.ingredients.map((ingredient) => {
+        if (ingredient.id !== id) return ingredient;
+        const next = { ...ingredient, ...patch };
+        if (patch.unit) {
+          const candidateKey = buildIngredientKey(next.name, next.unit);
+          if (optionMap.has(candidateKey)) {
+            next.ingredientKey = candidateKey;
+          } else if (next.ingredientKey) {
+            const currentOption = optionMap.get(normalizeKey(next.ingredientKey));
+            if (currentOption && normalizeKey(currentOption.unit) !== normalizeKey(next.unit)) {
+              next.ingredientKey = undefined;
+            }
+          }
+        }
+        return next;
+      }),
     }));
   }
 
@@ -336,21 +369,31 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
     const seen = new Set<string>();
     const result: Ingredient[] = [];
     ingredients.forEach((ingredient) => {
-      const key = `${ingredient.name.trim().toLowerCase()}__${ingredient.unit.trim().toLowerCase()}`;
-      if (ingredient.name.trim() && ingredient.unit.trim() && !seen.has(key)) {
-        seen.add(key);
-        const qty = Number.isFinite(ingredient.qty) ? ingredient.qty : 0;
-        const normalizedUnit = (ingredient.unit || "").trim();
-        const unit = MEASUREMENT_UNITS.includes(normalizedUnit as MeasurementUnit)
-          ? (normalizedUnit as MeasurementUnit)
-          : MEASUREMENT_UNITS[0];
-        result.push({
-          ...ingredient,
-          name: ingredient.name.trim(),
-          unit,
-          qty,
-        });
+      const name = ingredient.name.trim();
+      const normalizedUnit = (ingredient.unit || "").trim();
+      const unit = MEASUREMENT_UNITS.includes(normalizedUnit as MeasurementUnit)
+        ? (normalizedUnit as MeasurementUnit)
+        : MEASUREMENT_UNITS[0];
+      if (!name || !unit) {
+        return;
       }
+      const keyFromName = buildIngredientKey(name, unit);
+      const fromIngredient = ingredient.ingredientKey?.trim()
+        ? normalizeKey(ingredient.ingredientKey)
+        : undefined;
+      const dedupeKey = fromIngredient ?? keyFromName;
+      if (seen.has(dedupeKey)) {
+        return;
+      }
+      seen.add(dedupeKey);
+      const qty = Number.isFinite(ingredient.qty) ? ingredient.qty : 0;
+      result.push({
+        ...ingredient,
+        name,
+        unit,
+        qty,
+        ingredientKey: fromIngredient ?? keyFromName,
+      });
     });
     return result;
   }

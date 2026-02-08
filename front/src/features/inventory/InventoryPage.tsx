@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../../i18n";
+import type { IngredientOption } from "../../types";
+import { findIngredientOption, getIngredientOptionLabel } from "../../utils/ingredientNames";
 import { inventoryApi } from "./api";
 import { getExpiryStatus, getRestockStatus, getToBuy } from "./inventoryStatus";
 import type { InventoryFilters, InventoryItem, PetFoodItem } from "./types";
@@ -8,6 +10,7 @@ type InventoryTab = "products" | "catFood";
 type InventoryFormMode = "create" | "edit";
 
 type InventoryFormState = {
+  ingredientKey: string;
   name: string;
   baseName: string;
   category: string;
@@ -21,6 +24,7 @@ type InventoryFormState = {
 };
 
 const EMPTY_FORM: InventoryFormState = {
+  ingredientKey: "",
   name: "",
   baseName: "",
   category: "",
@@ -49,6 +53,10 @@ const DEFAULT_LOCATIONS = ["Комора", "Холодильник", "Мороз
 
 const DEFAULT_UNITS = ["шт", "кг", "г", "л", "мл", "упак", "пачка"];
 const DEFAULT_VISIBLE_PRODUCTS = 10;
+
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase();
+}
 
 type ConsumeFormState = {
   itemId: string | null;
@@ -92,7 +100,11 @@ function eventTone(event: InventoryEvent, today: Date): string {
   return "border-gray-100 bg-gray-50";
 }
 
-export function InventoryPage() {
+type InventoryPageProps = {
+  ingredientOptions: IngredientOption[];
+};
+
+export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
   const { t, language } = useTranslation();
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -309,6 +321,11 @@ export function InventoryPage() {
   }, [items, petItems]);
 
   const eventToday = new Date();
+  const ingredientOptionMap = useMemo(() => {
+    const map = new Map<string, IngredientOption>();
+    ingredientOptions.forEach((option) => map.set(normalizeKey(option.key), option));
+    return map;
+  }, [ingredientOptions]);
 
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -323,9 +340,13 @@ export function InventoryPage() {
   }
 
   function openEdit(item: InventoryItem) {
+    const resolvedKey = item.ingredientKey
+      ? normalizeKey(item.ingredientKey)
+      : findIngredientOption(ingredientOptions, item.name, item.unit)?.key || "";
     setFormMode("edit");
     setEditingId(item.id);
     setFormData({
+      ingredientKey: resolvedKey,
       name: item.name ?? "",
       baseName: item.baseName ?? "",
       category: item.category ?? "",
@@ -405,6 +426,56 @@ export function InventoryPage() {
     return parsed;
   }
 
+  function handleNameChange(value: string) {
+    const match = findIngredientOption(ingredientOptions, value);
+    if (match) {
+      setFormData((prev) => ({
+        ...prev,
+        name: match.name,
+        unit: match.unit,
+        ingredientKey: match.key,
+      }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, name: value, ingredientKey: "" }));
+  }
+
+  function handleUnitChange(value: string) {
+    setFormData((prev) => {
+      const next = { ...prev, unit: value };
+      if (next.ingredientKey) {
+        const option = ingredientOptionMap.get(normalizeKey(next.ingredientKey));
+        if (option && option.unit !== value) {
+          next.ingredientKey = "";
+        }
+      }
+      if (!next.ingredientKey && next.name.trim()) {
+        const match = findIngredientOption(ingredientOptions, next.name, value);
+        if (match) {
+          next.ingredientKey = match.key;
+          next.name = match.name;
+        }
+      }
+      return next;
+    });
+  }
+
+  function suggestionList(value: string): IngredientOption[] {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return ingredientOptions.slice(0, 8);
+    }
+    return ingredientOptions
+      .filter((option) => {
+        const base = option.name.toLowerCase();
+        if (base.includes(normalized)) return true;
+        return Object.values(option.translations ?? {}).some(
+          (translation) => translation.toLowerCase().includes(normalized),
+        );
+      })
+      .slice(0, 8);
+  }
+
   async function submitForm(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
@@ -432,7 +503,13 @@ export function InventoryPage() {
       return;
     }
 
+    const resolvedIngredientKey =
+      (formData.ingredientKey.trim() ? normalizeKey(formData.ingredientKey) : "") ||
+      findIngredientOption(ingredientOptions, name, unit)?.key ||
+      null;
+
     const payload = {
+      ingredientKey: resolvedIngredientKey,
       name,
       baseName: formData.baseName.trim() || null,
       category: formData.category.trim() || null,
@@ -996,8 +1073,16 @@ export function InventoryPage() {
                   <input
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     value={formData.name}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                    onChange={(event) => handleNameChange(event.target.value)}
+                    list="inventory-ingredient-suggestions"
                   />
+                  <datalist id="inventory-ingredient-suggestions">
+                    {suggestionList(formData.name).map((option) => (
+                      <option key={option.key} value={getIngredientOptionLabel(option, language)}>
+                        {getIngredientOptionLabel(option, language)} · {option.unit}
+                      </option>
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.baseName")}</label>
@@ -1041,7 +1126,7 @@ export function InventoryPage() {
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     list="inventory-unit-options"
                     value={formData.unit}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, unit: event.target.value }))}
+                    onChange={(event) => handleUnitChange(event.target.value)}
                   />
                 </div>
                 <div>

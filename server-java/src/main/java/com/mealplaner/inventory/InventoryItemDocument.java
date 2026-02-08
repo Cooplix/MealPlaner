@@ -13,6 +13,9 @@ public class InventoryItemDocument {
   @Field("user_id")
   private String userId;
 
+  @Field("ingredient_key")
+  private String ingredientKey;
+
   private String name;
 
   @Field("base_name")
@@ -51,6 +54,14 @@ public class InventoryItemDocument {
 
   public void setUserId(String userId) {
     this.userId = userId;
+  }
+
+  public String getIngredientKey() {
+    return ingredientKey;
+  }
+
+  public void setIngredientKey(String ingredientKey) {
+    this.ingredientKey = ingredientKey;
   }
 
   public String getName() {

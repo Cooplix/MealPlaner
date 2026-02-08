@@ -17,7 +17,7 @@ Single source of truth for implementation progress across all active plans.
 | Track | Source Doc | Current Step | Status | Next Action |
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
-| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 1 | planned | Add `ingredientKey` across dishes and inventory |
+| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 2 | planned | Add `user_id` to dishes, plans, ingredients, calories, purchases |
 | UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 1 | planned | UI audit and token spec |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
@@ -25,7 +25,8 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
-| 2026-02-08 | Process / Governance | Created progress tracking document and linked process rule in `AGENTS.md` | completed | Documentation review | pending |
+| 2026-02-08 | Functions Unification | Step 1: added `ingredientKey` to dishes and inventory (frontend + Java backend) | completed | Not run (not requested) | pending |
+| 2026-02-08 | Process / Governance | Created progress tracking document and linked process rule in `AGENTS.md` | completed | Documentation review | bc64b59 |
 
 ## Entry Template
 Use this template for new rows in `Work Log`:
