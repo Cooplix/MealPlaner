@@ -16,6 +16,13 @@ export interface InventoryItem {
   notes?: string | null;
 }
 
+export interface InventoryFilters {
+  search: string;
+  category: string;
+  location: string;
+  status: "all" | "expired" | "soon" | "restock";
+}
+
 export interface PetFoodItem {
   id: string;
   manufacturer: string;
