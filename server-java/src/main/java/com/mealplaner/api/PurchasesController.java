@@ -63,7 +63,8 @@ public class PurchasesController {
           payload.getAmount(),
           payload.getUnit(),
           payload.getPrice(),
-          payload.getPurchasedAt()
+          payload.getPurchasedAt(),
+          payload.isApplyToInventory()
       );
       return toEntry(saved);
     } catch (IllegalArgumentException exc) {

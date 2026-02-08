@@ -13,6 +13,9 @@ public class PurchaseCreate {
   @JsonProperty("purchasedAt")
   private LocalDateTime purchasedAt;
 
+  @JsonProperty("applyToInventory")
+  private boolean applyToInventory;
+
   public String getIngredientKey() {
     return ingredientKey;
   }
@@ -51,5 +54,13 @@ public class PurchaseCreate {
 
   public void setPurchasedAt(LocalDateTime purchasedAt) {
     this.purchasedAt = purchasedAt;
+  }
+
+  public boolean isApplyToInventory() {
+    return applyToInventory;
+  }
+
+  public void setApplyToInventory(boolean applyToInventory) {
+    this.applyToInventory = applyToInventory;
   }
 }

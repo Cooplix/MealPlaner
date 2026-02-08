@@ -40,6 +40,9 @@ public class InventoryService {
     if (doc.getAddedAt() == null) {
       doc.setAddedAt(Instant.now());
     }
+    if (doc.getChangeSource() == null || doc.getChangeSource().isBlank()) {
+      doc.setChangeSource("manual");
+    }
     return repository.save(doc);
   }
 
@@ -93,6 +96,7 @@ public class InventoryService {
     if (notes != null) {
       existing.setNotes(normalizeOptional(notes));
     }
+    existing.setChangeSource("manual");
     if (ingredientKey != null) {
       existing.setIngredientKey(normalizeIngredientKey(ingredientKey, existing.getName(), existing.getUnit()));
     }
@@ -118,7 +122,53 @@ public class InventoryService {
       throw new IllegalArgumentException("Cannot consume more than available");
     }
     existing.setQuantity(next);
+    existing.setChangeSource("consume");
     return repository.save(existing);
+  }
+
+  public InventoryItemDocument addStock(
+      String userId,
+      String ingredientKey,
+      String name,
+      double amount,
+      String unit,
+      String location,
+      String source
+  ) {
+    if (amount <= 0) {
+      throw new IllegalArgumentException("Amount must be greater than 0");
+    }
+    String resolvedUnit = requireValue(unit, "Unit is required");
+    String normalizedLocation = normalizeOptional(location);
+    String resolvedName = normalizeOptional(name);
+    if (resolvedName == null && ingredientKey != null && !ingredientKey.isBlank()) {
+      resolvedName = ingredientKey.trim();
+    }
+    String normalizedKey = normalizeIngredientKey(ingredientKey, resolvedName, resolvedUnit);
+    InventoryItemDocument target = repository
+        .findFirstByUserIdAndIngredientKeyAndUnitAndLocation(
+            userId,
+            normalizedKey,
+            resolvedUnit,
+            normalizedLocation
+        )
+        .orElseGet(() -> {
+          InventoryItemDocument created = new InventoryItemDocument();
+          created.setUserId(userId);
+          created.setIngredientKey(normalizedKey);
+          created.setName(resolvedName);
+          created.setUnit(resolvedUnit);
+          created.setLocation(normalizedLocation);
+          created.setAddedAt(Instant.now());
+          return created;
+        });
+    if (target.getName() == null && resolvedName != null) {
+      target.setName(resolvedName);
+    }
+    target.setQuantity(target.getQuantity() + amount);
+    target.setChangeSource(source == null || source.isBlank() ? "purchase" : source.trim().toLowerCase());
+    validate(target);
+    return repository.save(target);
   }
 
   private void validate(InventoryItemDocument doc) {

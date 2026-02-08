@@ -271,6 +271,7 @@ export const api = {
         unit: string;
         price: number;
         purchasedAt: string;
+        applyToInventory: boolean;
     }): Promise<PurchaseEntry> {
         return request<PurchaseEntry>("/purchases", {
             method: "POST",

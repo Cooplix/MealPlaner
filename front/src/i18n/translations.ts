@@ -408,6 +408,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         unit: "Unit",
         price: "Price",
         purchasedAt: "Purchased at",
+        applyToInventory: "Add to inventory",
         submit: "Save purchase",
       },
       validation: {
@@ -965,6 +966,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         unit: "Одиниця",
         price: "Вартість",
         purchasedAt: "Дата й час покупки",
+        applyToInventory: "Додати в запаси",
         submit: "Зберегти покупку",
       },
       validation: {
@@ -1522,6 +1524,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         unit: "Jednostka",
         price: "Cena",
         purchasedAt: "Data i czas zakupu",
+        applyToInventory: "Dodaj do zapasów",
         submit: "Zapisz zakup",
       },
       validation: {

@@ -40,6 +40,9 @@ public class InventoryItemDocument {
 
   private String notes;
 
+  @Field("change_source")
+  private String changeSource;
+
   public String getId() {
     return id;
   }
@@ -150,5 +153,13 @@ public class InventoryItemDocument {
 
   public void setNotes(String notes) {
     this.notes = notes;
+  }
+
+  public String getChangeSource() {
+    return changeSource;
+  }
+
+  public void setChangeSource(String changeSource) {
+    this.changeSource = changeSource;
   }
 }

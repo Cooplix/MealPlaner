@@ -439,6 +439,7 @@ function App() {
         unit: string;
         price: number;
         purchasedAt: string;
+        applyToInventory: boolean;
     }): Promise<void> {
         try {
             await api.createPurchase(payload);

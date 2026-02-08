@@ -2,6 +2,7 @@ package com.mealplaner.purchase;
 
 import com.mealplaner.ingredient.IngredientDocument;
 import com.mealplaner.ingredient.IngredientRepository;
+import com.mealplaner.inventory.InventoryService;
 import com.mealplaner.util.Units;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,10 +18,16 @@ import org.springframework.stereotype.Service;
 public class PurchaseService {
   private final PurchaseRepository repository;
   private final IngredientRepository ingredientRepository;
+  private final InventoryService inventoryService;
 
-  public PurchaseService(PurchaseRepository repository, IngredientRepository ingredientRepository) {
+  public PurchaseService(
+      PurchaseRepository repository,
+      IngredientRepository ingredientRepository,
+      InventoryService inventoryService
+  ) {
     this.repository = repository;
     this.ingredientRepository = ingredientRepository;
+    this.inventoryService = inventoryService;
   }
 
   public List<PurchaseDocument> list(
@@ -78,7 +85,8 @@ public class PurchaseService {
       double amount,
       String unit,
       double price,
-      LocalDateTime purchasedAt
+      LocalDateTime purchasedAt,
+      boolean applyToInventory
   ) {
     String key = ingredientKey == null ? "" : ingredientKey.trim();
     if (key.isEmpty()) {
@@ -86,6 +94,7 @@ public class PurchaseService {
     }
     IngredientDocument ingredient = ingredientRepository.findByUserIdAndKey(userId, key)
         .orElseThrow(() -> new IllegalStateException("Ingredient not found"));
+    String sanitizedUnit = Units.sanitize(unit);
     PurchaseDocument doc = new PurchaseDocument();
     doc.setUserId(userId);
     doc.setIngredientKey(key);
@@ -95,10 +104,22 @@ public class PurchaseService {
             : ingredient.getName()
     );
     doc.setAmount(amount);
-    doc.setUnit(Units.sanitize(unit));
+    doc.setUnit(sanitizedUnit);
     doc.setPrice(price);
     doc.setPurchasedAt(normalize(purchasedAt));
-    return repository.save(doc);
+    PurchaseDocument saved = repository.save(doc);
+    if (applyToInventory) {
+      inventoryService.addStock(
+          userId,
+          key,
+          ingredient.getName(),
+          amount,
+          sanitizedUnit,
+          null,
+          "purchase"
+      );
+    }
+    return saved;
   }
 
   private Instant normalize(LocalDateTime value) {

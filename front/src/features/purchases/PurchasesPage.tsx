@@ -15,6 +15,7 @@ interface PurchasesPageProps {
     unit: string;
     price: number;
     purchasedAt: string;
+    applyToInventory: boolean;
   }) => Promise<void>;
   onRefresh?: () => Promise<void>;
 }
@@ -31,6 +32,7 @@ interface FormState {
   unit: MeasurementUnit;
   price: string;
   purchasedAt: string;
+  applyToInventory: boolean;
 }
 
 function formatDateTimeLocal(date: Date): string {
@@ -59,6 +61,7 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
     unit: (initialIngredient?.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
     price: "",
     purchasedAt: formatDateTimeLocal(new Date()),
+    applyToInventory: true,
   }));
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -175,6 +178,7 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
         unit: formState.unit,
         price: parsedPrice,
         purchasedAt: toIsoString(formState.purchasedAt),
+        applyToInventory: formState.applyToInventory,
       });
       setFormSuccess(t("purchases.messages.saved") as string);
       setFormState((prev) => ({
@@ -317,6 +321,15 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
             >
               {submitting ? "…" : (t("purchases.form.submit") as string)}
             </button>
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-gray-900"
+                checked={formState.applyToInventory}
+                onChange={(event) => handleFormChange({ applyToInventory: event.target.checked })}
+              />
+              {t("purchases.form.applyToInventory")}
+            </label>
             {formError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {formError}

@@ -8,4 +8,10 @@ public interface InventoryItemRepository extends MongoRepository<InventoryItemDo
   List<InventoryItemDocument> findByUserId(String userId);
   Optional<InventoryItemDocument> findByIdAndUserId(String id, String userId);
   void deleteByIdAndUserId(String id, String userId);
+  Optional<InventoryItemDocument> findFirstByUserIdAndIngredientKeyAndUnitAndLocation(
+      String userId,
+      String ingredientKey,
+      String unit,
+      String location
+  );
 }
