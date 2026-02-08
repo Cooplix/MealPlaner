@@ -27,7 +27,7 @@ services:
       context: ..
       dockerfile: front/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_API_URL: ${VITE_API_URL:-/mealplanner/api}
     depends_on:
       - backend-java
     ports:

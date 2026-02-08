@@ -20,5 +20,6 @@
 
 Consult `AGENTS.md` for contributor guidelines. Exposed services by default:
 - Frontend: http://localhost:5173
+- If hosted under a subpath (e.g. `http://raspberrypi.local/mealplanner/`), set `VITE_API_URL` to `/mealplanner/api`.
 - API: http://localhost:8000
 - MongoDB: external (set `MONGODB_URI`)
