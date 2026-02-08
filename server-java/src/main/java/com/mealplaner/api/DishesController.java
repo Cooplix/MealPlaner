@@ -8,6 +8,7 @@ import com.mealplaner.auth.UserPrincipal;
 import com.mealplaner.dish.DishDocument;
 import com.mealplaner.dish.DishIngredient;
 import com.mealplaner.dish.DishService;
+import com.mealplaner.util.Units;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -114,7 +115,7 @@ public class DishesController {
   private DishIngredientDto toDtoIngredient(DishIngredient ingredient) {
     DishIngredientDto dto = new DishIngredientDto();
     dto.setName(ingredient.getName());
-    dto.setUnit(ingredient.getUnit());
+    dto.setUnit(Units.sanitize(ingredient.getUnit()));
     dto.setQty(ingredient.getQty());
     return dto;
   }
