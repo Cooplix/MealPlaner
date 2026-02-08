@@ -9,6 +9,15 @@ spring:
       uri: ${MONGODB_URI}
       database: ${MONGODB_DB}
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me}
+    algorithm: HS256
+    exp-minutes: ${JWT_EXP_MINUTES:120}
+  admin:
+    login: ${ADMIN_LOGIN:admin}
+    initial-password: ${ADMIN_INITIAL_PASSWORD:}
+
 management:
   endpoints:
     web:
