@@ -273,3 +273,9 @@ DoD:
 ## 13. Рішення по alias scope (рекомендація)
 - За замовчуванням alias робити `user-scoped`.
 - Додати опцію `promote to global` тільки для admin після ручної валідації.
+
+## 14. Відкладені питання (потребують рішення пізніше)
+1. Alias scope:
+- Працюємо тільки з `user-scoped` alias, чи додаємо також `global` alias для admin?
+2. OCR стратегія запуску:
+- Стартуємо з локального OCR (`Tesseract/PaddleOCR`) чи одразу з cloud OCR/AI провайдером?
