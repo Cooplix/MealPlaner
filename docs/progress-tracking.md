@@ -25,6 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-08 | UI/UX Improvement | Dish details modal: constrain height and enable scrolling | completed | Not run (not requested) | 378804f |
 | 2026-02-08 | UI/UX Improvement | Dishes list: uniform cards + show-more modal with full recipe preview | completed | Not run (not requested) | 29a2cd4 |
 | 2026-02-08 | Functions Unification | Step 10: E2E smoke flow (ingredients → dishes → plans → shopping → purchases → inventory → analytics) | completed | `scripts/step10-smoke.sh` | eb9ffa6 |
 | 2026-02-08 | Functions Unification | Step 10: fixed plan date filtering for range queries | completed | `scripts/step10-smoke.sh` | b4fa605 |
