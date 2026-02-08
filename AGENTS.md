@@ -46,6 +46,7 @@
 - Functions unification plan: `docs/functions-unification-plan-2026-02-08.md`
 - OCR/AI receipts integration plan: `docs/receipt-ocr-ai-plan-2026-02-08.md`
 - Weekly dish recommendations improvement plan: `docs/weekly-dish-recommendations-plan-2026-02-08.md`
+- UI/UX improvement plan: `docs/ui-improvement-plan-2026-02-08.md`
 
 ## Recent Events
 - New page requirements document: `docs/NewPage.md`
@@ -53,3 +54,4 @@
 - Cutover: Java backend is primary, Python backend is legacy.
 - Added OCR/AI receipt ingestion and auto-mapping plan: `docs/receipt-ocr-ai-plan-2026-02-08.md`
 - Added weekly recommendations improvement plan: `docs/weekly-dish-recommendations-plan-2026-02-08.md`
+- Added UI/UX improvement plan: `docs/ui-improvement-plan-2026-02-08.md`
