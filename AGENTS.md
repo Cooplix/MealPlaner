@@ -44,8 +44,10 @@
 - Backend migration plan (Python -> Java 25 + Spring Boot): `docs/backend-migration-java25-spring.md`
 - New page execution plan (Inventory Management): `docs/new-page-execution-plan.md`
 - Functions unification plan: `docs/functions-unification-plan-2026-02-08.md`
+- OCR/AI receipts integration plan: `docs/receipt-ocr-ai-plan-2026-02-08.md`
 
 ## Recent Events
 - New page requirements document: `docs/NewPage.md`
 - Latest implementation playbook for the new page: `docs/new-page-execution-plan.md`
 - Cutover: Java backend is primary, Python backend is legacy.
+- Added OCR/AI receipt ingestion and auto-mapping plan: `docs/receipt-ocr-ai-plan-2026-02-08.md`
