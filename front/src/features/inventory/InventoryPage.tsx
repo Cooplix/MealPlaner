@@ -148,6 +148,10 @@ export function InventoryPage() {
     ];
   }, [t]);
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
+  const collator = useMemo(
+    () => new Intl.Collator(locale, { sensitivity: "base" }),
+    [locale],
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -230,32 +234,38 @@ export function InventoryPage() {
   const filteredItems = useMemo(() => {
     return items
       .filter((item) => {
-      const search = filters.search.trim().toLowerCase();
-      if (search) {
-        const hay = `${item.name} ${item.baseName ?? ""}`.toLowerCase();
-        if (!hay.includes(search)) return false;
-      }
-      if (filters.category !== "all" && item.category !== filters.category) return false;
-      if (filters.location !== "all" && item.location !== filters.location) return false;
+        const search = filters.search.trim().toLowerCase();
+        if (search) {
+          const hay = `${item.name} ${item.baseName ?? ""}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        if (filters.category !== "all" && item.category !== filters.category) return false;
+        if (filters.location !== "all" && item.location !== filters.location) return false;
 
-      if (filters.status !== "all") {
-        const expiry = getExpiryStatus(item.expiresAt);
-        const restock = getRestockStatus(item.quantity, item.minQty);
-        if (filters.status === "expired" && expiry !== "EXPIRED") return false;
-        if (filters.status === "soon" && !(expiry === "<=14d" || expiry === "<=30d"))
-          return false;
-        if (filters.status === "restock" && restock !== "RESTOCK") return false;
-      }
-      return true;
-    })
+        if (filters.status !== "all") {
+          const expiry = getExpiryStatus(item.expiresAt);
+          const restock = getRestockStatus(item.quantity, item.minQty);
+          if (filters.status === "expired" && expiry !== "EXPIRED") return false;
+          if (filters.status === "soon" && !(expiry === "<=14d" || expiry === "<=30d"))
+            return false;
+          if (filters.status === "restock" && restock !== "RESTOCK") return false;
+        }
+        return true;
+      })
       .sort((left, right) => {
-        const leftCategory = left.category?.trim() || "\uffff";
-        const rightCategory = right.category?.trim() || "\uffff";
-        const byCategory = leftCategory.localeCompare(rightCategory, locale, { sensitivity: "base" });
+        const leftCategory = left.category?.trim() ?? "";
+        const rightCategory = right.category?.trim() ?? "";
+        const leftCategoryMissing = leftCategory.length === 0;
+        const rightCategoryMissing = rightCategory.length === 0;
+        if (leftCategoryMissing !== rightCategoryMissing) {
+          return leftCategoryMissing ? 1 : -1;
+        }
+
+        const byCategory = collator.compare(leftCategory, rightCategory);
         if (byCategory !== 0) return byCategory;
-        return left.name.localeCompare(right.name, locale, { sensitivity: "base" });
+        return collator.compare(left.name ?? "", right.name ?? "");
       });
-  }, [items, filters, locale]);
+  }, [items, filters, collator]);
 
   const visibleFilteredItems = useMemo(
     () => filteredItems.slice(0, visibleProductsCount),
