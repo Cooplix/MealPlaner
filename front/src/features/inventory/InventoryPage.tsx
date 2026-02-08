@@ -5,6 +5,33 @@ import { getExpiryStatus, getRestockStatus, getToBuy } from "./inventoryStatus";
 import type { InventoryFilters, InventoryItem } from "./types";
 
 type InventoryTab = "products" | "catFood";
+type InventoryFormMode = "create" | "edit";
+
+type InventoryFormState = {
+  name: string;
+  baseName: string;
+  category: string;
+  location: string;
+  quantity: string;
+  unit: string;
+  minQty: string;
+  maxQty: string;
+  expiresAt: string;
+  notes: string;
+};
+
+const EMPTY_FORM: InventoryFormState = {
+  name: "",
+  baseName: "",
+  category: "",
+  location: "",
+  quantity: "",
+  unit: "",
+  minQty: "",
+  maxQty: "",
+  expiresAt: "",
+  notes: "",
+};
 
 export function InventoryPage() {
   const { t } = useTranslation();
@@ -12,6 +39,12 @@ export function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<InventoryFormMode>("create");
+  const [formData, setFormData] = useState<InventoryFormState>(EMPTY_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<InventoryFilters>({
     search: "",
     category: "all",
@@ -96,6 +129,116 @@ export function InventoryPage() {
 
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function openCreate() {
+    setFormMode("create");
+    setEditingId(null);
+    setFormData(EMPTY_FORM);
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  function openEdit(item: InventoryItem) {
+    setFormMode("edit");
+    setEditingId(item.id);
+    setFormData({
+      name: item.name ?? "",
+      baseName: item.baseName ?? "",
+      category: item.category ?? "",
+      location: item.location ?? "",
+      quantity: String(item.quantity ?? ""),
+      unit: item.unit ?? "",
+      minQty: item.minQty != null ? String(item.minQty) : "",
+      maxQty: item.maxQty != null ? String(item.maxQty) : "",
+      expiresAt: item.expiresAt ? item.expiresAt.slice(0, 10) : "",
+      notes: item.notes ?? "",
+    });
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    if (formSubmitting) return;
+    setFormOpen(false);
+    setFormError(null);
+  }
+
+  function parseNumber(value: string): number | null {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    if (Number.isNaN(parsed)) return null;
+    return parsed;
+  }
+
+  async function submitForm(event: React.FormEvent) {
+    event.preventDefault();
+    setFormError(null);
+
+    const name = formData.name.trim();
+    const unit = formData.unit.trim();
+    const quantity = parseNumber(formData.quantity);
+    const minQty = parseNumber(formData.minQty);
+    const maxQty = parseNumber(formData.maxQty);
+
+    if (!name) {
+      setFormError(t("inventory.form.errors.nameRequired") as string);
+      return;
+    }
+    if (quantity == null) {
+      setFormError(t("inventory.form.errors.quantityRequired") as string);
+      return;
+    }
+    if (!unit) {
+      setFormError(t("inventory.form.errors.unitRequired") as string);
+      return;
+    }
+    if (minQty != null && maxQty != null && minQty > maxQty) {
+      setFormError(t("inventory.form.errors.minMax") as string);
+      return;
+    }
+
+    const payload = {
+      name,
+      baseName: formData.baseName.trim() || null,
+      category: formData.category.trim() || null,
+      location: formData.location.trim() || null,
+      quantity,
+      unit,
+      minQty,
+      maxQty,
+      expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
+      notes: formData.notes.trim() || null,
+    };
+
+    try {
+      setFormSubmitting(true);
+      if (formMode === "create") {
+        const created = await inventoryApi.createItem(payload);
+        setItems((prev) => [created, ...prev]);
+      } else if (editingId) {
+        const updated = await inventoryApi.updateItem(editingId, payload);
+        setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      }
+      setFormOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(t("inventory.form.errors.submit", { message }) as string);
+    } finally {
+      setFormSubmitting(false);
+    }
+  }
+
+  async function deleteItem(item: InventoryItem) {
+    if (!window.confirm(t("inventory.form.deleteConfirm") as string)) return;
+    try {
+      await inventoryApi.deleteItem(item.id);
+      setItems((prev) => prev.filter((entry) => entry.id !== item.id));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(t("inventory.form.errors.delete", { message }) as string);
+    }
   }
 
   return (
@@ -200,6 +343,18 @@ export function InventoryPage() {
           </div>
           {activeTab === "products" && (
             <div className="mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+                <div className="text-xs text-gray-500">
+                  {t("inventory.table.count", { count: filteredItems.length })}
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
+                  onClick={openCreate}
+                >
+                  {t("inventory.form.addButton")}
+                </button>
+              </div>
               {loading && (
                 <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
                   {t("inventory.table.loading")}
@@ -225,6 +380,7 @@ export function InventoryPage() {
                         <th className="px-3 py-2">{t("inventory.table.columns.expiry")}</th>
                         <th className="px-3 py-2">{t("inventory.table.columns.status")}</th>
                         <th className="px-3 py-2">{t("inventory.table.columns.toBuy")}</th>
+                        <th className="px-3 py-2 text-right">{t("inventory.table.columns.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -257,6 +413,24 @@ export function InventoryPage() {
                             <td className="px-3 py-2">
                               {toBuy > 0 ? `${toBuy} ${item.unit}` : "—"}
                             </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                                  onClick={() => openEdit(item)}
+                                >
+                                  {t("inventory.form.editButton")}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                                  onClick={() => deleteItem(item)}
+                                >
+                                  {t("inventory.form.deleteButton")}
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -285,6 +459,147 @@ export function InventoryPage() {
           ))}
         </ul>
       </div>
+      {formOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {formMode === "create"
+                    ? t("inventory.form.createTitle")
+                    : t("inventory.form.editTitle")}
+                </h2>
+                <p className="text-sm text-gray-500">{t("inventory.form.subtitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500"
+                onClick={closeForm}
+                aria-label={t("inventory.form.close") as string}
+              >
+                ✕
+              </button>
+            </div>
+            <form className="mt-4 space-y-4" onSubmit={submitForm}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.name")}</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.name}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.baseName")}</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.baseName}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, baseName: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.category")}</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.category}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.location")}</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.location}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, location: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.quantity")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.quantity}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, quantity: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.unit")}</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.unit}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, unit: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.minQty")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.minQty}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, minQty: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.maxQty")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.maxQty}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, maxQty: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.expiresAt")}</label>
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={formData.expiresAt}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-gray-600">{t("inventory.form.fields.notes")}</label>
+                  <textarea
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    rows={3}
+                    value={formData.notes}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, notes: event.target.value }))}
+                  />
+                </div>
+              </div>
+              {formError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  onClick={closeForm}
+                >
+                  {t("inventory.form.cancelButton")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-70"
+                  disabled={formSubmitting}
+                >
+                  {formSubmitting
+                    ? t("inventory.form.saving")
+                    : formMode === "create"
+                      ? t("inventory.form.saveButton")
+                      : t("inventory.form.updateButton")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
