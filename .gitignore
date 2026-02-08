@@ -8,6 +8,9 @@ front/dist
 .venv/
 .pytest_cache/
 
+# Java artefacts
+server-java/target/
+
 # Editor junk
 .idea/
 .vscode/
