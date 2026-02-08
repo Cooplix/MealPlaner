@@ -36,6 +36,7 @@
 - The repository lacks an established history; follow Conventional Commits (`feat:`, `fix:`, `chore:`) so automation can evolve later.
 - Scope commits narrowly, include contextual details in the body, and reference relevant issues.
 - Always create a commit at the end of each operation.
+- Before finishing an operation, update `docs/progress-tracking.md` with the latest completed work (date, track, status, validation, commit hash; use `pending` if commit is not created yet).
 - Pull requests should describe the change, list validation steps (`npm run lint`, `npm run build`), and add screenshots or screen recordings for UI updates.
 - Request review when the branch is rebased on the latest mainline and all required checks pass locally.
 
@@ -47,6 +48,7 @@
 - OCR/AI receipts integration plan: `docs/receipt-ocr-ai-plan-2026-02-08.md`
 - Weekly dish recommendations improvement plan: `docs/weekly-dish-recommendations-plan-2026-02-08.md`
 - UI/UX improvement plan: `docs/ui-improvement-plan-2026-02-08.md`
+- Progress tracking log: `docs/progress-tracking.md`
 
 ## Recent Events
 - New page requirements document: `docs/NewPage.md`
