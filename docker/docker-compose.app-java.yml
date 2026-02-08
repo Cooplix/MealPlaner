@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: server-java/Dockerfile
+    environment:
+      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/}
+      MONGODB_DB: ${MONGODB_DB:-mealplanner}
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-please-change-me}
+      JWT_EXP_MINUTES: ${JWT_EXP_MINUTES:-120}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-ChangeMeNow123!}
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: front/Dockerfile
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    restart: unless-stopped

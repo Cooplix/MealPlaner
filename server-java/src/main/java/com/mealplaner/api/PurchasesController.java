@@ -4,7 +4,7 @@ import com.mealplaner.api.dto.PurchaseCreate;
 import com.mealplaner.api.dto.PurchaseEntry;
 import com.mealplaner.purchase.PurchaseDocument;
 import com.mealplaner.purchase.PurchaseService;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -71,7 +71,7 @@ public class PurchasesController {
     entry.setAmount(doc.getAmount());
     entry.setUnit(doc.getUnit());
     entry.setPrice(doc.getPrice());
-    entry.setPurchasedAt(OffsetDateTime.ofInstant(doc.getPurchasedAt(), ZoneOffset.UTC));
+    entry.setPurchasedAt(LocalDateTime.ofInstant(doc.getPurchasedAt(), ZoneOffset.UTC));
     return entry;
   }
 }

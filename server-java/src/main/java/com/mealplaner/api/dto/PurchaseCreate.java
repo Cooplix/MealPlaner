@@ -1,7 +1,7 @@
 package com.mealplaner.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 public class PurchaseCreate {
   @JsonProperty("ingredientKey")
@@ -11,7 +11,7 @@ public class PurchaseCreate {
   private double price;
 
   @JsonProperty("purchasedAt")
-  private OffsetDateTime purchasedAt;
+  private LocalDateTime purchasedAt;
 
   public String getIngredientKey() {
     return ingredientKey;
@@ -45,11 +45,11 @@ public class PurchaseCreate {
     this.price = price;
   }
 
-  public OffsetDateTime getPurchasedAt() {
+  public LocalDateTime getPurchasedAt() {
     return purchasedAt;
   }
 
-  public void setPurchasedAt(OffsetDateTime purchasedAt) {
+  public void setPurchasedAt(LocalDateTime purchasedAt) {
     this.purchasedAt = purchasedAt;
   }
 }

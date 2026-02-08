@@ -6,6 +6,7 @@ import com.mealplaner.util.Units;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -59,7 +60,7 @@ public class PurchaseService {
       double amount,
       String unit,
       double price,
-      OffsetDateTime purchasedAt
+      LocalDateTime purchasedAt
   ) {
     String key = ingredientKey == null ? "" : ingredientKey.trim();
     if (key.isEmpty()) {
@@ -81,11 +82,11 @@ public class PurchaseService {
     return repository.save(doc);
   }
 
-  private Instant normalize(OffsetDateTime value) {
+  private Instant normalize(LocalDateTime value) {
     if (value == null) {
       return Instant.now();
     }
-    return value.toInstant();
+    return value.toInstant(ZoneOffset.UTC);
   }
 
   private Instant parseRange(String raw, boolean endOfDay) {

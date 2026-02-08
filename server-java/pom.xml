@@ -88,6 +88,11 @@
             <goals>
               <goal>prepare-agent</goal>
             </goals>
+            <configuration>
+              <includes>
+                <include>com/mealplaner/**</include>
+              </includes>
+            </configuration>
           </execution>
           <execution>
             <id>report</id>
