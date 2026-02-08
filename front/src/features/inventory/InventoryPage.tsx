@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../../i18n";
 import { inventoryApi } from "./api";
 import { getExpiryStatus, getRestockStatus, getToBuy } from "./inventoryStatus";
-import type { InventoryFilters, InventoryItem } from "./types";
+import type { InventoryFilters, InventoryItem, PetFoodItem } from "./types";
 
 type InventoryTab = "products" | "catFood";
 type InventoryFormMode = "create" | "edit";
@@ -38,12 +38,51 @@ type ConsumeFormState = {
   amount: string;
 };
 
+type PetFormState = {
+  manufacturer: string;
+  productName: string;
+  foodType: string;
+  packageType: string;
+  weight: string;
+  weightUnit: string;
+  quantity: string;
+  minQty: string;
+  maxQty: string;
+  expiresAt: string;
+  notes: string;
+};
+
 export function InventoryPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [petItems, setPetItems] = useState<PetFoodItem[]>([]);
+  const [petLoading, setPetLoading] = useState(false);
+  const [petError, setPetError] = useState<string | null>(null);
+  const [petFormOpen, setPetFormOpen] = useState(false);
+  const [petFormMode, setPetFormMode] = useState<InventoryFormMode>("create");
+  const [petEditingId, setPetEditingId] = useState<string | null>(null);
+  const [petFormError, setPetFormError] = useState<string | null>(null);
+  const [petFormSubmitting, setPetFormSubmitting] = useState(false);
+  const [petFormData, setPetFormData] = useState<PetFormState>({
+    manufacturer: "",
+    productName: "",
+    foodType: "",
+    packageType: "",
+    weight: "",
+    weightUnit: "",
+    quantity: "",
+    minQty: "",
+    maxQty: "",
+    expiresAt: "",
+    notes: "",
+  });
+  const [petConsumeOpen, setPetConsumeOpen] = useState(false);
+  const [petConsumeError, setPetConsumeError] = useState<string | null>(null);
+  const [petConsumeSubmitting, setPetConsumeSubmitting] = useState(false);
+  const [petConsumeForm, setPetConsumeForm] = useState<ConsumeFormState>({ itemId: null, amount: "" });
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<InventoryFormMode>("create");
   const [formData, setFormData] = useState<InventoryFormState>(EMPTY_FORM);
@@ -91,6 +130,36 @@ export function InventoryPage() {
       .finally(() => {
         if (!ignore) {
           setLoading(false);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (activeTab !== "catFood") {
+      return;
+    }
+    setPetLoading(true);
+    setPetError(null);
+    inventoryApi
+      .listPetItems()
+      .then((data) => {
+        if (!ignore) {
+          setPetItems(data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : String(err);
+          setPetError(message);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setPetLoading(false);
         }
       });
     return () => {
@@ -185,6 +254,44 @@ export function InventoryPage() {
     setConsumeError(null);
   }
 
+  function openPetForm(mode: InventoryFormMode, item?: PetFoodItem) {
+    setPetFormMode(mode);
+    setPetEditingId(item?.id ?? null);
+    setPetFormData({
+      manufacturer: item?.manufacturer ?? "",
+      productName: item?.productName ?? "",
+      foodType: item?.foodType ?? "",
+      packageType: item?.packageType ?? "",
+      weight: item?.weight != null ? String(item.weight) : "",
+      weightUnit: item?.weightUnit ?? "",
+      quantity: item?.quantity != null ? String(item.quantity) : "",
+      minQty: item?.minQty != null ? String(item.minQty) : "",
+      maxQty: item?.maxQty != null ? String(item.maxQty) : "",
+      expiresAt: item?.expiresAt ? item.expiresAt.slice(0, 10) : "",
+      notes: item?.notes ?? "",
+    });
+    setPetFormError(null);
+    setPetFormOpen(true);
+  }
+
+  function closePetForm() {
+    if (petFormSubmitting) return;
+    setPetFormOpen(false);
+    setPetFormError(null);
+  }
+
+  function openPetConsume(item: PetFoodItem) {
+    setPetConsumeForm({ itemId: item.id, amount: "" });
+    setPetConsumeError(null);
+    setPetConsumeOpen(true);
+  }
+
+  function closePetConsume() {
+    if (petConsumeSubmitting) return;
+    setPetConsumeOpen(false);
+    setPetConsumeError(null);
+  }
+
   function parseNumber(value: string): number | null {
     const trimmed = value.trim();
     if (!trimmed) return null;
@@ -276,6 +383,101 @@ export function InventoryPage() {
     }
   }
 
+  async function submitPetForm(event: React.FormEvent) {
+    event.preventDefault();
+    setPetFormError(null);
+
+    const manufacturer = petFormData.manufacturer.trim();
+    const productName = petFormData.productName.trim();
+    const quantity = parseNumber(petFormData.quantity);
+    const weight = parseNumber(petFormData.weight);
+    const minQty = parseNumber(petFormData.minQty);
+    const maxQty = parseNumber(petFormData.maxQty);
+
+    if (!manufacturer) {
+      setPetFormError(t("inventory.pet.form.errors.manufacturerRequired") as string);
+      return;
+    }
+    if (!productName) {
+      setPetFormError(t("inventory.pet.form.errors.productRequired") as string);
+      return;
+    }
+    if (quantity == null) {
+      setPetFormError(t("inventory.pet.form.errors.quantityRequired") as string);
+      return;
+    }
+    if (minQty != null && maxQty != null && minQty > maxQty) {
+      setPetFormError(t("inventory.pet.form.errors.minMax") as string);
+      return;
+    }
+
+    const payload = {
+      manufacturer,
+      productName,
+      foodType: petFormData.foodType.trim() || null,
+      packageType: petFormData.packageType.trim() || null,
+      weight,
+      weightUnit: petFormData.weightUnit.trim() || null,
+      quantity,
+      minQty,
+      maxQty,
+      expiresAt: petFormData.expiresAt ? new Date(petFormData.expiresAt).toISOString() : null,
+      notes: petFormData.notes.trim() || null,
+    };
+
+    try {
+      setPetFormSubmitting(true);
+      if (petFormMode === "create") {
+        const created = await inventoryApi.createPetItem(payload);
+        setPetItems((prev) => [created, ...prev]);
+      } else if (petEditingId) {
+        const updated = await inventoryApi.updatePetItem(petEditingId, payload);
+        setPetItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      }
+      setPetFormOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setPetFormError(t("inventory.pet.form.errors.submit", { message }) as string);
+    } finally {
+      setPetFormSubmitting(false);
+    }
+  }
+
+  async function deletePetItem(item: PetFoodItem) {
+    if (!window.confirm(t("inventory.pet.form.deleteConfirm") as string)) return;
+    try {
+      await inventoryApi.deletePetItem(item.id);
+      setPetItems((prev) => prev.filter((entry) => entry.id !== item.id));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setPetError(t("inventory.pet.form.errors.delete", { message }) as string);
+    }
+  }
+
+  async function submitPetConsume(event: React.FormEvent) {
+    event.preventDefault();
+    setPetConsumeError(null);
+    const amount = parseNumber(petConsumeForm.amount);
+    if (amount == null || amount <= 0) {
+      setPetConsumeError(t("inventory.pet.consume.errors.amountRequired") as string);
+      return;
+    }
+    if (!petConsumeForm.itemId) {
+      setPetConsumeError(t("inventory.pet.consume.errors.unknownItem") as string);
+      return;
+    }
+    try {
+      setPetConsumeSubmitting(true);
+      const updated = await inventoryApi.consumePetItem(petConsumeForm.itemId, { amount });
+      setPetItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setPetConsumeOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setPetConsumeError(t("inventory.pet.consume.errors.submit", { message }) as string);
+    } finally {
+      setPetConsumeSubmitting(false);
+    }
+  }
   async function deleteItem(item: InventoryItem) {
     if (!window.confirm(t("inventory.form.deleteConfirm") as string)) return;
     try {
@@ -494,9 +696,110 @@ export function InventoryPage() {
             </div>
           )}
           {activeTab === "catFood" && (
-            <p className="mt-1 text-sm text-gray-500">
-              {t("inventory.table.placeholder")}
-            </p>
+            <div className="mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+                <div className="text-xs text-gray-500">
+                  {t("inventory.pet.table.count", { count: petItems.length })}
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
+                  onClick={() => openPetForm("create")}
+                >
+                  {t("inventory.pet.form.addButton")}
+                </button>
+              </div>
+              {petLoading && (
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                  {t("inventory.pet.table.loading")}
+                </div>
+              )}
+              {petError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {t("inventory.pet.table.error", { message: petError })}
+                </div>
+              )}
+              {!petLoading && !petError && petItems.length === 0 && (
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                  {t("inventory.pet.table.empty")}
+                </div>
+              )}
+              {!petLoading && !petError && petItems.length > 0 && (
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th className="px-3 py-2">{t("inventory.pet.table.columns.product")}</th>
+                        <th className="px-3 py-2">{t("inventory.pet.table.columns.quantity")}</th>
+                        <th className="px-3 py-2">{t("inventory.pet.table.columns.expiry")}</th>
+                        <th className="px-3 py-2">{t("inventory.pet.table.columns.status")}</th>
+                        <th className="px-3 py-2">{t("inventory.pet.table.columns.toBuy")}</th>
+                        <th className="px-3 py-2 text-right">{t("inventory.pet.table.columns.actions")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {petItems.map((item) => {
+                        const expiry = getExpiryStatus(item.expiresAt);
+                        const restock = getRestockStatus(item.quantity, item.minQty);
+                        const toBuy = getToBuy(item.quantity, item.minQty, item.maxQty);
+                        const title = `${item.manufacturer} ${item.productName}`.trim();
+                        const meta = [item.foodType, item.packageType, item.weight]
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <tr key={item.id} className="bg-white">
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-gray-900">{title}</div>
+                              <div className="text-xs text-gray-500">{meta || "—"}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              {item.quantity}
+                            </td>
+                            <td className="px-3 py-2">
+                              {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-col text-xs text-gray-600">
+                                <span>{t(`inventory.status.expiry.${expiry}`)}</span>
+                                <span>{t(`inventory.status.restock.${restock}`)}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              {toBuy > 0 ? `${toBuy}` : "—"}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                  onClick={() => openPetConsume(item)}
+                                >
+                                  {t("inventory.pet.consume.button")}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                                  onClick={() => openPetForm("edit", item)}
+                                >
+                                  {t("inventory.pet.form.editButton")}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                                  onClick={() => deletePetItem(item)}
+                                >
+                                  {t("inventory.pet.form.deleteButton")}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -706,6 +1009,262 @@ export function InventoryPage() {
                   {consumeSubmitting
                     ? t("inventory.consume.saving")
                     : t("inventory.consume.confirm")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {petFormOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {petFormMode === "create"
+                    ? t("inventory.pet.form.createTitle")
+                    : t("inventory.pet.form.editTitle")}
+                </h2>
+                <p className="text-sm text-gray-500">{t("inventory.pet.form.subtitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500"
+                onClick={closePetForm}
+                aria-label={t("inventory.pet.form.close") as string}
+              >
+                ✕
+              </button>
+            </div>
+            <form className="mt-4 space-y-4" onSubmit={submitPetForm}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.manufacturer")}
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.manufacturer}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, manufacturer: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.productName")}
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.productName}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, productName: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.foodType")}
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.foodType}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, foodType: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.packageType")}
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.packageType}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, packageType: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.weight")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.weight}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, weight: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.weightUnit")}
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.weightUnit}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, weightUnit: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.quantity")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.quantity}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, quantity: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.minQty")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.minQty}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, minQty: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.maxQty")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.maxQty}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, maxQty: event.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.expiresAt")}
+                  </label>
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petFormData.expiresAt}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, expiresAt: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.form.fields.notes")}
+                  </label>
+                  <textarea
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    rows={3}
+                    value={petFormData.notes}
+                    onChange={(event) =>
+                      setPetFormData((prev) => ({ ...prev, notes: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              {petFormError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {petFormError}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  onClick={closePetForm}
+                >
+                  {t("inventory.pet.form.cancelButton")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-70"
+                  disabled={petFormSubmitting}
+                >
+                  {petFormSubmitting
+                    ? t("inventory.pet.form.saving")
+                    : petFormMode === "create"
+                      ? t("inventory.pet.form.saveButton")
+                      : t("inventory.pet.form.updateButton")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {petConsumeOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("inventory.pet.consume.title")}
+                </h2>
+                <p className="text-sm text-gray-500">{t("inventory.pet.consume.subtitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500"
+                onClick={closePetConsume}
+                aria-label={t("inventory.pet.consume.close") as string}
+              >
+                ✕
+              </button>
+            </div>
+            <form className="mt-4 space-y-4" onSubmit={submitPetConsume}>
+              <div>
+                <label className="text-sm text-gray-600">
+                  {t("inventory.pet.consume.amount")}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  value={petConsumeForm.amount}
+                  onChange={(event) =>
+                    setPetConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
+                  }
+                />
+              </div>
+              {petConsumeError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {petConsumeError}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  onClick={closePetConsume}
+                >
+                  {t("inventory.pet.consume.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
+                  disabled={petConsumeSubmitting}
+                >
+                  {petConsumeSubmitting
+                    ? t("inventory.pet.consume.saving")
+                    : t("inventory.pet.consume.confirm")}
                 </button>
               </div>
             </form>
