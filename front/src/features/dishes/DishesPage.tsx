@@ -45,7 +45,7 @@ export function DishesPage({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
   const { t, language } = useTranslation();
-  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
+  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
 
   const optionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();

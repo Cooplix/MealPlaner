@@ -34,7 +34,7 @@ type Draft = {
 
 export function CaloriesPage({ ingredients, entries, units, onAddEntry, onUpdateEntry }: CaloriesPageProps) {
   const { t, language } = useTranslation();
-  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
+  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
   const [ingredientKey, setIngredientKey] = useState<string>("");
   const [amount, setAmount] = useState<string>("100");
   const [unit, setUnit] = useState<string>(unitOptions[0] ?? "");

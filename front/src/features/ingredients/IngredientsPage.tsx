@@ -17,7 +17,7 @@ type Draft = { name: string; unit: string };
 
 export function IngredientsPage({ ingredients, units, onAddIngredient, onUpdateIngredient }: IngredientsPageProps) {
   const { t, language } = useTranslation();
-  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
+  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
   const [name, setName] = useState("");
   const [unit, setUnit] = useState<string>(unitOptions[0] ?? "");
   const [error, setError] = useState<string | null>(null);

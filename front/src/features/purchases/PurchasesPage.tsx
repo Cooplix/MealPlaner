@@ -66,7 +66,7 @@ export function PurchasesPage({
 }: PurchasesPageProps) {
   const { t, language } = useTranslation();
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
-  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
+  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
   const locationOptions = locations.length ? locations : DEFAULT_LOCATIONS;
 
   const initialIngredient = ingredients[0];

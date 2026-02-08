@@ -145,25 +145,27 @@ public class InventoryService {
       resolvedName = ingredientKey.trim();
     }
     String normalizedKey = normalizeIngredientKey(ingredientKey, resolvedName, resolvedUnit);
+    final String resolvedNameValue = resolvedName;
+    final String normalizedKeyValue = normalizedKey;
     InventoryItemDocument target = repository
         .findFirstByUserIdAndIngredientKeyAndUnitAndLocation(
             userId,
-            normalizedKey,
+            normalizedKeyValue,
             resolvedUnit,
             normalizedLocation
         )
         .orElseGet(() -> {
           InventoryItemDocument created = new InventoryItemDocument();
           created.setUserId(userId);
-          created.setIngredientKey(normalizedKey);
-          created.setName(resolvedName);
+          created.setIngredientKey(normalizedKeyValue);
+          created.setName(resolvedNameValue);
           created.setUnit(resolvedUnit);
           created.setLocation(normalizedLocation);
           created.setAddedAt(Instant.now());
           return created;
         });
-    if (target.getName() == null && resolvedName != null) {
-      target.setName(resolvedName);
+    if (target.getName() == null && resolvedNameValue != null) {
+      target.setName(resolvedNameValue);
     }
     target.setQuantity(target.getQuantity() + amount);
     target.setChangeSource(source == null || source.isBlank() ? "purchase" : source.trim().toLowerCase());

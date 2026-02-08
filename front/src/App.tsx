@@ -117,7 +117,9 @@ function App() {
         }
     }, [t, handleLogout]);
 
-    const referenceUnits = referenceData?.units?.length ? referenceData.units : MEASUREMENT_UNITS;
+    const referenceUnits = referenceData?.units?.length
+        ? referenceData.units
+        : Array.from(MEASUREMENT_UNITS);
     const referenceCategories = referenceData?.inventoryCategories?.length
         ? referenceData.inventoryCategories
         : INVENTORY_CATEGORIES;
