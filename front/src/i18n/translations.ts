@@ -45,6 +45,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       subtitle: "Track products and cat food in one place.",
       placeholderTitle: "Inventory module is ready for setup.",
       placeholderBody: "We will add the data tables, filters, and actions in the next steps.",
+      tabs: {
+        products: "Products",
+        catFood: "Cat food tracker",
+      },
+      filters: {
+        search: "Search",
+        category: "Category",
+        location: "Location",
+        status: "Status",
+      },
+      table: {
+        productsTitle: "Products inventory",
+        catFoodTitle: "Cat food inventory",
+        placeholder: "Tables will appear here once API data is connected.",
+      },
       hints: {
         products: "Products inventory with expiry and restock statuses.",
         catFood: "Cat food tracker with portion-aware quantities.",
@@ -432,6 +447,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       subtitle: "Облік продуктів і корму в одному місці.",
       placeholderTitle: "Модуль інвентарю готовий до налаштування.",
       placeholderBody: "Далі додамо таблиці, фільтри та дії.",
+      tabs: {
+        products: "Продукти",
+        catFood: "Трекер корму",
+      },
+      filters: {
+        search: "Пошук",
+        category: "Категорія",
+        location: "Локація",
+        status: "Статус",
+      },
+      table: {
+        productsTitle: "Запаси продуктів",
+        catFoodTitle: "Запаси корму",
+        placeholder: "Таблиці з’являться після підключення API.",
+      },
       hints: {
         products: "Запаси продуктів зі статусами терміну та поповнення.",
         catFood: "Трекер корму з урахуванням порцій.",
@@ -819,6 +849,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       subtitle: "Produkty i karma w jednym miejscu.",
       placeholderTitle: "Moduł zapasów jest gotowy do konfiguracji.",
       placeholderBody: "W kolejnych krokach dodamy tabele, filtry i akcje.",
+      tabs: {
+        products: "Produkty",
+        catFood: "Tracker karmy",
+      },
+      filters: {
+        search: "Szukaj",
+        category: "Kategoria",
+        location: "Lokalizacja",
+        status: "Status",
+      },
+      table: {
+        productsTitle: "Zapasy produktów",
+        catFoodTitle: "Zapasy karmy",
+        placeholder: "Tabele pojawią się po podłączeniu API.",
+      },
       hints: {
         products: "Zapasy produktów ze statusami ważności i uzupełniania.",
         catFood: "Tracker karmy z uwzględnieniem porcji.",
