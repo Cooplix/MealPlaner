@@ -501,7 +501,7 @@ function App() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <header className="border-b bg-white">
-                <div className="mx-auto max-w-5xl px-4 py-4">
+                <div className="mx-auto max-w-7xl px-2 py-4 sm:px-4">
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
                             <div className="min-w-0">
@@ -569,7 +569,7 @@ function App() {
             </header>
 
             <main className="flex-1">
-                <div className="mx-auto max-w-5xl px-4 py-4 space-y-4">
+                <div className="mx-auto max-w-7xl px-2 py-4 sm:px-4 space-y-4">
                     {loadingData && (
                         <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
                             {t("app.loading")}
@@ -657,7 +657,7 @@ function App() {
             </main>
 
             <footer className="border-t bg-white mt-8">
-                <div className="mx-auto max-w-5xl px-4 py-3 text-xs text-gray-500">
+                <div className="mx-auto max-w-7xl px-2 py-3 sm:px-4 text-xs text-gray-500">
                     {t("app.footer") as string}
                 </div>
             </footer>

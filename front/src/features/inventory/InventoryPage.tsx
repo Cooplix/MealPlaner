@@ -33,6 +33,22 @@ const EMPTY_FORM: InventoryFormState = {
   notes: "",
 };
 
+const DEFAULT_CATEGORIES = [
+  "Крупи/хліб/борошно",
+  "Соуси/спеції/консервація",
+  "Овочі/фрукти",
+  "Молочне",
+  "Солодке",
+  "Білок",
+  "Жири/олії",
+  "Заморожене",
+  "Інше",
+];
+
+const DEFAULT_LOCATIONS = ["Комора", "Холодильник", "Морозилка"];
+
+const DEFAULT_UNITS = ["шт", "кг", "г", "л", "мл", "упак", "пачка"];
+
 type ConsumeFormState = {
   itemId: string | null;
   amount: string;
@@ -58,6 +74,22 @@ type InventoryEvent = {
   label: string;
   kind: "expiry" | "restock";
 };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function eventTone(event: InventoryEvent, today: Date): string {
+  if (event.kind !== "expiry") return "border-gray-100 bg-gray-50";
+  const diffDays = Math.floor((startOfDay(event.date).getTime() - startOfDay(today).getTime()) / MS_PER_DAY);
+  if (diffDays <= 7) return "border-red-200 bg-red-50";
+  if (diffDays <= 14) return "border-rose-200 bg-rose-50";
+  if (diffDays <= 30) return "border-amber-200 bg-amber-50";
+  if (diffDays <= 60) return "border-yellow-200 bg-yellow-50";
+  return "border-gray-100 bg-gray-50";
+}
 
 export function InventoryPage() {
   const { t, language } = useTranslation();
@@ -177,6 +209,7 @@ export function InventoryPage() {
 
   const categories = useMemo(() => {
     const unique = new Set<string>();
+    DEFAULT_CATEGORIES.forEach((value) => unique.add(value));
     items.forEach((item) => {
       if (item.category) unique.add(item.category);
     });
@@ -185,6 +218,7 @@ export function InventoryPage() {
 
   const locations = useMemo(() => {
     const unique = new Set<string>();
+    DEFAULT_LOCATIONS.forEach((value) => unique.add(value));
     items.forEach((item) => {
       if (item.location) unique.add(item.location);
     });
@@ -244,6 +278,8 @@ export function InventoryPage() {
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .slice(0, 10);
   }, [items, petItems]);
+
+  const eventToday = new Date();
 
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -857,7 +893,7 @@ export function InventoryPage() {
               {upcomingEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="flex items-start justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm"
+                  className={`flex items-start justify-between rounded-lg border px-3 py-2 text-sm ${eventTone(event, eventToday)}`}
                 >
                   <div>
                     <div className="font-medium text-gray-800">{event.label}</div>
@@ -931,6 +967,7 @@ export function InventoryPage() {
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.category")}</label>
                   <input
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    list="inventory-category-options"
                     value={formData.category}
                     onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
                   />
@@ -939,6 +976,7 @@ export function InventoryPage() {
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.location")}</label>
                   <input
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    list="inventory-location-options"
                     value={formData.location}
                     onChange={(event) => setFormData((prev) => ({ ...prev, location: event.target.value }))}
                   />
@@ -957,6 +995,7 @@ export function InventoryPage() {
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.unit")}</label>
                   <input
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    list="inventory-unit-options"
                     value={formData.unit}
                     onChange={(event) => setFormData((prev) => ({ ...prev, unit: event.target.value }))}
                   />
@@ -1000,6 +1039,21 @@ export function InventoryPage() {
                   />
                 </div>
               </div>
+              <datalist id="inventory-category-options">
+                {DEFAULT_CATEGORIES.map((category) => (
+                  <option key={category} value={category} />
+                ))}
+              </datalist>
+              <datalist id="inventory-location-options">
+                {DEFAULT_LOCATIONS.map((location) => (
+                  <option key={location} value={location} />
+                ))}
+              </datalist>
+              <datalist id="inventory-unit-options">
+                {DEFAULT_UNITS.map((unit) => (
+                  <option key={unit} value={unit} />
+                ))}
+              </datalist>
               {formError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {formError}
