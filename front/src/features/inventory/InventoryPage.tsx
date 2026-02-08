@@ -33,6 +33,11 @@ const EMPTY_FORM: InventoryFormState = {
   notes: "",
 };
 
+type ConsumeFormState = {
+  itemId: string | null;
+  amount: string;
+};
+
 export function InventoryPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
@@ -45,6 +50,10 @@ export function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [consumeForm, setConsumeForm] = useState<ConsumeFormState>({ itemId: null, amount: "" });
+  const [consumeOpen, setConsumeOpen] = useState(false);
+  const [consumeError, setConsumeError] = useState<string | null>(null);
+  const [consumeSubmitting, setConsumeSubmitting] = useState(false);
   const [filters, setFilters] = useState<InventoryFilters>({
     search: "",
     category: "all",
@@ -164,6 +173,18 @@ export function InventoryPage() {
     setFormError(null);
   }
 
+  function openConsume(item: InventoryItem) {
+    setConsumeForm({ itemId: item.id, amount: "" });
+    setConsumeError(null);
+    setConsumeOpen(true);
+  }
+
+  function closeConsume() {
+    if (consumeSubmitting) return;
+    setConsumeOpen(false);
+    setConsumeError(null);
+  }
+
   function parseNumber(value: string): number | null {
     const trimmed = value.trim();
     if (!trimmed) return null;
@@ -227,6 +248,31 @@ export function InventoryPage() {
       setFormError(t("inventory.form.errors.submit", { message }) as string);
     } finally {
       setFormSubmitting(false);
+    }
+  }
+
+  async function submitConsume(event: React.FormEvent) {
+    event.preventDefault();
+    setConsumeError(null);
+    const amount = parseNumber(consumeForm.amount);
+    if (amount == null || amount <= 0) {
+      setConsumeError(t("inventory.consume.errors.amountRequired") as string);
+      return;
+    }
+    if (!consumeForm.itemId) {
+      setConsumeError(t("inventory.consume.errors.unknownItem") as string);
+      return;
+    }
+    try {
+      setConsumeSubmitting(true);
+      const updated = await inventoryApi.consumeItem(consumeForm.itemId, { amount });
+      setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setConsumeOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setConsumeError(t("inventory.consume.errors.submit", { message }) as string);
+    } finally {
+      setConsumeSubmitting(false);
     }
   }
 
@@ -417,6 +463,13 @@ export function InventoryPage() {
                               <div className="flex justify-end gap-2">
                                 <button
                                   type="button"
+                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                  onClick={() => openConsume(item)}
+                                >
+                                  {t("inventory.consume.button")}
+                                </button>
+                                <button
+                                  type="button"
                                   className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
                                   onClick={() => openEdit(item)}
                                 >
@@ -594,6 +647,65 @@ export function InventoryPage() {
                     : formMode === "create"
                       ? t("inventory.form.saveButton")
                       : t("inventory.form.updateButton")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {consumeOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("inventory.consume.title")}
+                </h2>
+                <p className="text-sm text-gray-500">{t("inventory.consume.subtitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500"
+                onClick={closeConsume}
+                aria-label={t("inventory.consume.close") as string}
+              >
+                ✕
+              </button>
+            </div>
+            <form className="mt-4 space-y-4" onSubmit={submitConsume}>
+              <div>
+                <label className="text-sm text-gray-600">{t("inventory.consume.amount")}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  value={consumeForm.amount}
+                  onChange={(event) =>
+                    setConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
+                  }
+                />
+              </div>
+              {consumeError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {consumeError}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  onClick={closeConsume}
+                >
+                  {t("inventory.consume.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
+                  disabled={consumeSubmitting}
+                >
+                  {consumeSubmitting
+                    ? t("inventory.consume.saving")
+                    : t("inventory.consume.confirm")}
                 </button>
               </div>
             </form>
