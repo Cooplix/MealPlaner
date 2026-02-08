@@ -3,13 +3,17 @@
 ```
 /
 ├─ front/   → React + Vite frontend application
-├─ server/  → FastAPI backend with MongoDB persistence
+├─ server/  → Legacy FastAPI backend with MongoDB persistence
+├─ server-java/ → Java 25 + Spring Boot backend (current)
 └─ docker/  → Containerisation assets (docker-compose, nginx config, etc.)
 ```
 
 - Frontend documentation and scripts live in `front/README.md`.
-- Backend FastAPI app resides under `server/app` with dependencies in `server/requirements.txt`.
-- Use `docker/docker-compose.yml` to launch the full stack (`frontend`, `backend`, `mongo`) locally:
+- Legacy FastAPI app resides under `server/app` with dependencies in `server/requirements.txt`.
+- Use `docker/docker-compose.app-java.yml` (via `scripts/app-java-up.sh`) to launch the current stack (`frontend` + Java backend).
+- Use `docker/docker-compose.app.yml` (via `scripts/app-up.sh`) to launch the legacy stack if needed.
+- Use `docker/docker-compose.dual.yml` (via `scripts/dual-run-up.sh`) to run Python + Java side-by-side.
+- Use `docker/docker-compose.yml` for the original stack (`frontend`, legacy backend, `mongo`).
   ```bash
   cd docker
   docker compose up --build

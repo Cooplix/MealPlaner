@@ -1,7 +1,7 @@
 # План міграції бекенду: Python -> Java 25 + Spring Boot
 
 Дата: 2026-02-07  
-Статус: Draft (готовий до деталізації в задачі-епіку)
+Статус: Cutover (Java backend is primary; Python backend is legacy)
 
 ## 1. Ціль і межі міграції
 

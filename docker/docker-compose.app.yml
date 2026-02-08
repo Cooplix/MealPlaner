@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  backend:
+  backend-legacy:
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -15,6 +15,10 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - backend
 
   frontend:
     build:
@@ -23,7 +27,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
     depends_on:
-      - backend
+      - backend-legacy
     ports:
       - "5173:80"
     restart: unless-stopped

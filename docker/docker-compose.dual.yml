@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  backend-python:
+  backend-legacy:
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -16,6 +16,10 @@ services:
       - "8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      default:
+        aliases:
+          - backend
 
   backend-java:
     build:
