@@ -35,9 +35,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     menu: {
       profile: "My profile",
+      inventory: "Inventory management",
       ingredients: "Ingredients",
       calories: "Calorie presets",
       logout: "Log out",
+    },
+    inventory: {
+      title: "Inventory management",
+      subtitle: "Track products and cat food in one place.",
+      placeholderTitle: "Inventory module is ready for setup.",
+      placeholderBody: "We will add the data tables, filters, and actions in the next steps.",
+      hints: {
+        products: "Products inventory with expiry and restock statuses.",
+        catFood: "Cat food tracker with portion-aware quantities.",
+        status: "Quick actions for consume and replenishment.",
+      },
     },
     profile: {
       title: "My profile",
@@ -410,9 +422,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     menu: {
       profile: "Мій профіль",
+      inventory: "Управління запасами",
       ingredients: "Інгредієнти",
       calories: "Калорійність",
       logout: "Вийти",
+    },
+    inventory: {
+      title: "Управління запасами",
+      subtitle: "Облік продуктів і корму в одному місці.",
+      placeholderTitle: "Модуль інвентарю готовий до налаштування.",
+      placeholderBody: "Далі додамо таблиці, фільтри та дії.",
+      hints: {
+        products: "Запаси продуктів зі статусами терміну та поповнення.",
+        catFood: "Трекер корму з урахуванням порцій.",
+        status: "Швидкі дії для списання та поповнення.",
+      },
     },
     profile: {
       title: "Мій профіль",
@@ -785,9 +809,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
     },
     menu: {
       profile: "Mój profil",
+      inventory: "Zarządzanie zapasami",
       ingredients: "Składniki",
       calories: "Kaloryczność",
       logout: "Wyloguj",
+    },
+    inventory: {
+      title: "Zarządzanie zapasami",
+      subtitle: "Produkty i karma w jednym miejscu.",
+      placeholderTitle: "Moduł zapasów jest gotowy do konfiguracji.",
+      placeholderBody: "W kolejnych krokach dodamy tabele, filtry i akcje.",
+      hints: {
+        products: "Zapasy produktów ze statusami ważności i uzupełniania.",
+        catFood: "Tracker karmy z uwzględnieniem porcji.",
+        status: "Szybkie akcje zużycia i uzupełnień.",
+      },
     },
     profile: {
       title: "Mój profil",

@@ -12,6 +12,7 @@ import {TabButton} from "./components/TabButton";
 import {LoginPage} from "./features/auth/LoginPage";
 import {CalendarPage} from "./features/calendar/CalendarPage";
 import {DishesPage} from "./features/dishes/DishesPage";
+import {InventoryPage} from "./features/inventory/InventoryPage";
 import {IngredientsPage} from "./features/ingredients/IngredientsPage";
 import {ShoppingPage} from "./features/shopping/ShoppingPage";
 import {CaloriesPage} from "./features/calories/CaloriesPage";
@@ -30,7 +31,7 @@ import type {
     UserProfile,
 } from "./types";
 
-type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories" | "purchases" | "spending" | "dishCosts" | "profile";
+type TabId = "calendar" | "dishes" | "shopping" | "ingredients" | "calories" | "purchases" | "spending" | "dishCosts" | "profile" | "inventory";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -551,10 +552,12 @@ function App() {
                                 <HeaderMenu
                                     menuLabel={t("app.menuLabel") as string}
                                     profileLabel={t("menu.profile") as string}
+                                    inventoryLabel={t("menu.inventory") as string}
                                     ingredientsLabel={t("menu.ingredients") as string}
                                     caloriesLabel={t("menu.calories") as string}
                                     logoutLabel={t("menu.logout") as string}
                                     onSelectProfile={() => setActiveTab("profile")}
+                                    onSelectInventory={() => setActiveTab("inventory")}
                                     onSelectIngredients={() => setActiveTab("ingredients")}
                                     onSelectCalories={() => setActiveTab("calories")}
                                     onLogout={handleLogout}
@@ -646,6 +649,9 @@ function App() {
                             user={user}
                             onUserChange={(updated) => setUser(updated)}
                         />
+                    )}
+                    {activeTab === "inventory" && (
+                        <InventoryPage />
                     )}
                 </div>
             </main>
