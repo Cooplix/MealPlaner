@@ -116,6 +116,11 @@ public class MigrationService {
     for (InventoryItemDocument item : inventoryItems) {
       boolean changed = false;
       String currentKey = item.getIngredientKey();
+      String resolvedUnit = Units.resolve(item.getUnit());
+      if (resolvedUnit != null && !resolvedUnit.equals(item.getUnit())) {
+        item.setUnit(resolvedUnit);
+        changed = true;
+      }
       if (currentKey != null && !currentKey.isBlank()) {
         String normalizedKey = currentKey.trim().toLowerCase();
         if (!normalizedKey.equals(currentKey)) {
@@ -303,13 +308,6 @@ public class MigrationService {
   }
 
   private String normalizeUnit(String value) {
-    if (value == null) {
-      return null;
-    }
-    String normalized = value.trim().toLowerCase();
-    if (Units.MEASUREMENT_UNITS.contains(normalized)) {
-      return normalized;
-    }
-    return null;
+    return Units.resolve(value);
   }
 }
