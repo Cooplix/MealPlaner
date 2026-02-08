@@ -1,6 +1,7 @@
 import { API_ROOT, UnauthorizedError, api } from "../../api";
 import type {
   ConsumeRequest,
+  InventoryEvent,
   InventoryItem,
   InventoryItemCreate,
   InventoryItemUpdate,
@@ -93,5 +94,12 @@ export const inventoryApi = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+  listEvents(params?: { limit?: number; lookaheadDays?: number }): Promise<InventoryEvent[]> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.lookaheadDays) query.set("lookaheadDays", String(params.lookaheadDays));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<InventoryEvent[]>(`/events${suffix}`);
   },
 };

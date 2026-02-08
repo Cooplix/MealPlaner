@@ -146,6 +146,11 @@ export const translations: Record<Language, Record<string, unknown>> = {
         empty: "No upcoming inventory events.",
         expiryLabel: "Expiry",
         restockLabel: "Restock",
+        criticalLabel: "Critical to buy",
+        purchaseLabel: "Expensive purchase",
+        restockDetail: "Need {{amount}}",
+        criticalDetail: "Buy {{amount}}",
+        purchaseDetail: "Spent {{price}} · {{amount}}",
       },
       pet: {
         table: {
@@ -281,6 +286,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     errors: {
       loadData: "Failed to load data: {{message}}",
       loadAnalytics: "Failed to load analytics: {{message}}",
+      loadEvents: "Failed to load events: {{message}}",
       saveDish: "Failed to save dish: {{message}}",
       deleteDish: "Failed to delete dish: {{message}}",
       savePlan: "Failed to save plan: {{message}}",
@@ -725,6 +731,11 @@ export const translations: Record<Language, Record<string, unknown>> = {
         empty: "Немає найближчих подій.",
         expiryLabel: "Термін",
         restockLabel: "Поповнення",
+        criticalLabel: "Критично купити",
+        purchaseLabel: "Дорогі покупки",
+        restockDetail: "Потрібно {{amount}}",
+        criticalDetail: "Купити {{amount}}",
+        purchaseDetail: "Витрачено {{price}} · {{amount}}",
       },
       pet: {
         table: {
@@ -860,6 +871,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     errors: {
       loadData: "Не вдалося завантажити дані: {{message}}",
       loadAnalytics: "Не вдалося завантажити аналітику: {{message}}",
+      loadEvents: "Не вдалося завантажити події: {{message}}",
       saveDish: "Не вдалося зберегти страву: {{message}}",
       deleteDish: "Не вдалося видалити страву: {{message}}",
       savePlan: "Не вдалося зберегти план: {{message}}",
@@ -1304,6 +1316,11 @@ export const translations: Record<Language, Record<string, unknown>> = {
         empty: "Brak nadchodzących wydarzeń.",
         expiryLabel: "Ważność",
         restockLabel: "Uzupełnienie",
+        criticalLabel: "Krytyczne zakupy",
+        purchaseLabel: "Drogie zakupy",
+        restockDetail: "Potrzeba {{amount}}",
+        criticalDetail: "Kup {{amount}}",
+        purchaseDetail: "Wydano {{price}} · {{amount}}",
       },
       pet: {
         table: {
@@ -1439,6 +1456,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
     errors: {
       loadData: "Nie udało się wczytać danych: {{message}}",
       loadAnalytics: "Nie udało się wczytać analityki: {{message}}",
+      loadEvents: "Nie udało się wczytać wydarzeń: {{message}}",
       saveDish: "Nie udało się zapisać dania: {{message}}",
       deleteDish: "Nie udało się usunąć dania: {{message}}",
       savePlan: "Nie udało się zapisać planu: {{message}}",

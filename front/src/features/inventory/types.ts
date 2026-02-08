@@ -75,3 +75,17 @@ export type PetFoodItemUpdate = Partial<PetFoodItemCreate>;
 export interface ConsumeRequest {
   amount: number;
 }
+
+export type InventoryEventKind = "expiry" | "restock" | "critical" | "purchase";
+export type InventoryEventPriority = "critical" | "high" | "medium" | "low";
+
+export interface InventoryEvent {
+  id: string;
+  kind: InventoryEventKind;
+  priority: InventoryEventPriority;
+  title: string;
+  date: string;
+  amount?: number | null;
+  unit?: string | null;
+  price?: number | null;
+}

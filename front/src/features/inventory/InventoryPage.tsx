@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
 import { findIngredientOption, getIngredientOptionLabel } from "../../utils/ingredientNames";
 import { inventoryApi } from "./api";
 import { getExpiryStatus, getRestockStatus, getToBuy } from "./inventoryStatus";
-import type { InventoryFilters, InventoryItem, PetFoodItem } from "./types";
+import type { InventoryEvent, InventoryFilters, InventoryItem, PetFoodItem } from "./types";
 
 type InventoryTab = "products" | "catFood";
 type InventoryFormMode = "create" | "edit";
@@ -62,27 +62,17 @@ type PetFormState = {
   notes: string;
 };
 
-type InventoryEvent = {
-  id: string;
-  date: Date;
-  label: string;
-  kind: "expiry" | "restock";
-};
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function eventTone(event: InventoryEvent, today: Date): string {
-  if (event.kind !== "expiry") return "border-gray-100 bg-gray-50";
-  const diffDays = Math.floor((startOfDay(event.date).getTime() - startOfDay(today).getTime()) / MS_PER_DAY);
-  if (diffDays <= 7) return "border-red-200 bg-red-50";
-  if (diffDays <= 14) return "border-rose-200 bg-rose-50";
-  if (diffDays <= 30) return "border-amber-200 bg-amber-50";
-  if (diffDays <= 60) return "border-yellow-200 bg-yellow-50";
-  return "border-gray-100 bg-gray-50";
+function eventTone(event: InventoryEvent): string {
+  switch (event.priority) {
+    case "critical":
+      return "border-red-200 bg-red-50";
+    case "high":
+      return "border-rose-200 bg-rose-50";
+    case "medium":
+      return "border-amber-200 bg-amber-50";
+    default:
+      return "border-gray-100 bg-gray-50";
+  }
 }
 
 type InventoryPageProps = {
@@ -103,6 +93,9 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
   const [petItems, setPetItems] = useState<PetFoodItem[]>([]);
   const [petLoading, setPetLoading] = useState(false);
   const [petError, setPetError] = useState<string | null>(null);
+  const [events, setEvents] = useState<InventoryEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [petFormOpen, setPetFormOpen] = useState(false);
   const [petFormMode, setPetFormMode] = useState<InventoryFormMode>("create");
   const [petEditingId, setPetEditingId] = useState<string | null>(null);
@@ -154,6 +147,32 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     () => new Intl.Collator(locale, { sensitivity: "base" }),
     [locale],
   );
+  const quantityFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
+    [locale],
+  );
+  const priceFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    [locale],
+  );
+
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      const data = await inventoryApi.listEvents();
+      setEvents(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err ?? t("common.unknownError"));
+      setEventsError(message);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
 
   useEffect(() => {
     let ignore = false;
@@ -305,39 +324,6 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     setVisibleProductsCount(DEFAULT_VISIBLE_PRODUCTS);
   }, [activeTab, filters.search, filters.category, filters.location, filters.status]);
 
-  const upcomingEvents = useMemo<InventoryEvent[]>(() => {
-    const now = new Date();
-    const events: InventoryEvent[] = [];
-    const addExpiry = (id: string, label: string, expiresAt?: string | null) => {
-      if (!expiresAt) return;
-      const date = new Date(expiresAt);
-      if (Number.isNaN(date.getTime())) return;
-      events.push({ id: `expiry-${id}`, date, label, kind: "expiry" });
-    };
-    const addRestock = (id: string, label: string, quantity: number, minQty?: number | null) => {
-      if (minQty == null || quantity >= minQty) return;
-      events.push({ id: `restock-${id}`, date: now, label, kind: "restock" });
-    };
-
-    items.forEach((item) => {
-      const name = item.name;
-      addExpiry(item.id, name, item.expiresAt);
-      addRestock(item.id, name, item.quantity, item.minQty);
-    });
-
-    petItems.forEach((item) => {
-      const name = `${item.manufacturer} ${item.productName}`.trim();
-      addExpiry(item.id, name, item.expiresAt);
-      addRestock(item.id, name, item.quantity, item.minQty);
-    });
-
-    return events
-      .filter((event) => event.date >= new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000))
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .slice(0, 10);
-  }, [items, petItems]);
-
-  const eventToday = new Date();
   const ingredientOptionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
     ingredientOptions.forEach((option) => map.set(normalizeKey(option.key), option));
@@ -347,6 +333,39 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
+  };
+
+  const eventKindLabel = (event: InventoryEvent): string => {
+    switch (event.kind) {
+      case "expiry":
+        return t("inventory.events.expiryLabel") as string;
+      case "restock":
+        return t("inventory.events.restockLabel") as string;
+      case "critical":
+        return t("inventory.events.criticalLabel") as string;
+      case "purchase":
+        return t("inventory.events.purchaseLabel") as string;
+      default:
+        return t("inventory.events.restockLabel") as string;
+    }
+  };
+
+  const formatEventDetail = (event: InventoryEvent): string | null => {
+    if ((event.kind === "restock" || event.kind === "critical") && event.amount != null && event.unit) {
+      const amountLabel = `${quantityFormatter.format(event.amount)} ${formatUnit(event.unit)}`;
+      return event.kind === "restock"
+        ? (t("inventory.events.restockDetail", { amount: amountLabel }) as string)
+        : (t("inventory.events.criticalDetail", { amount: amountLabel }) as string);
+    }
+    if (event.kind === "purchase" && event.price != null) {
+      const priceLabel = priceFormatter.format(event.price);
+      if (event.amount != null && event.unit) {
+        const amountLabel = `${quantityFormatter.format(event.amount)} ${formatUnit(event.unit)}`;
+        return t("inventory.events.purchaseDetail", { price: priceLabel, amount: amountLabel }) as string;
+      }
+      return priceLabel;
+    }
+    return null;
   };
 
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
@@ -553,9 +572,11 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       if (formMode === "create") {
         const created = await inventoryApi.createItem(payload);
         setItems((prev) => [created, ...prev]);
+        void loadEvents();
       } else if (editingId) {
         const updated = await inventoryApi.updateItem(editingId, payload);
         setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        void loadEvents();
       }
       setFormOpen(false);
     } catch (err: unknown) {
@@ -582,6 +603,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       setConsumeSubmitting(true);
       const updated = await inventoryApi.consumeItem(consumeForm.itemId, { amount });
       setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      void loadEvents();
       setConsumeOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -638,9 +660,11 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       if (petFormMode === "create") {
         const created = await inventoryApi.createPetItem(payload);
         setPetItems((prev) => [created, ...prev]);
+        void loadEvents();
       } else if (petEditingId) {
         const updated = await inventoryApi.updatePetItem(petEditingId, payload);
         setPetItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        void loadEvents();
       }
       setPetFormOpen(false);
     } catch (err: unknown) {
@@ -656,6 +680,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     try {
       await inventoryApi.deletePetItem(item.id);
       setPetItems((prev) => prev.filter((entry) => entry.id !== item.id));
+      void loadEvents();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setPetError(t("inventory.pet.form.errors.delete", { message }) as string);
@@ -678,6 +703,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       setPetConsumeSubmitting(true);
       const updated = await inventoryApi.consumePetItem(petConsumeForm.itemId, { amount });
       setPetItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      void loadEvents();
       setPetConsumeOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -691,6 +717,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     try {
       await inventoryApi.deleteItem(item.id);
       setItems((prev) => prev.filter((entry) => entry.id !== item.id));
+      void loadEvents();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(t("inventory.form.errors.delete", { message }) as string);
@@ -1030,31 +1057,40 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
         <div className="text-sm font-semibold text-gray-800">{t("inventory.events.title")}</div>
         <p className="mt-1 text-sm text-gray-500">{t("inventory.events.subtitle")}</p>
         <div className="mt-4">
-          {upcomingEvents.length === 0 && (
+          {eventsError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {t("errors.loadEvents", { message: eventsError })}
+            </div>
+          )}
+          {eventsLoading && (
+            <div className="text-xs text-gray-500">{t("app.loading")}</div>
+          )}
+          {!eventsLoading && events.length === 0 && (
             <div className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-500">
               {t("inventory.events.empty")}
             </div>
           )}
-          {upcomingEvents.length > 0 && (
+          {events.length > 0 && (
             <div className="space-y-2">
-              {upcomingEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className={`flex items-start justify-between rounded-lg border px-3 py-2 text-sm ${eventTone(event, eventToday)}`}
-                >
-                  <div>
-                    <div className="font-medium text-gray-800">{event.label}</div>
+              {events.map((event) => {
+                const detail = formatEventDetail(event);
+                const eventDate = event.date ? new Date(event.date) : null;
+                return (
+                  <div
+                    key={event.id}
+                    className={`flex items-start justify-between rounded-lg border px-3 py-2 text-sm ${eventTone(event)}`}
+                  >
+                    <div>
+                      <div className="font-medium text-gray-800">{event.title}</div>
+                      <div className="text-xs text-gray-500">{eventKindLabel(event)}</div>
+                      {detail && <div className="text-xs text-gray-500">{detail}</div>}
+                    </div>
                     <div className="text-xs text-gray-500">
-                      {event.kind === "expiry"
-                        ? t("inventory.events.expiryLabel")
-                        : t("inventory.events.restockLabel")}
+                      {eventDate ? eventDate.toLocaleDateString(locale) : "—"}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {event.date.toLocaleDateString(locale)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
