@@ -10,12 +10,12 @@ import type {
 } from "./types";
 
 const envApiRoot = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+const defaultApiRoot = import.meta.env.DEV ? "http://localhost:8000/api" : `${baseUrl}/api`;
 const API_ROOT =
     envApiRoot && envApiRoot.length > 0
         ? envApiRoot
-        : import.meta.env.DEV
-            ? "http://localhost:8000/api"
-            : "/api";
+        : defaultApiRoot;
 
 const TOKEN_STORAGE_KEY = "mealplanner_access_token";
 
