@@ -110,10 +110,12 @@
 - Інтеграційні тести з тестовою Mongo.
 - Контрактні тести проти OpenAPI та golden responses.
 - Регресія з фронтендом (e2e/smoke сценарії).
+- Лінійне покриття коду Java >= 60% (JaCoCo).
 
 Цільові quality gates:
 - 100% проходження smoke/integration/contract у CI.
 - 0 blocker-багів у cutover вікні.
+- JaCoCo gate: `>= 60%` line coverage на `server-java`.
 
 ## 7. CI/CD і оточення
 
