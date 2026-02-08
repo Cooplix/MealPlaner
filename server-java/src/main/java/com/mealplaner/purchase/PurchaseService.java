@@ -86,7 +86,8 @@ public class PurchaseService {
       String unit,
       double price,
       LocalDateTime purchasedAt,
-      boolean applyToInventory
+      boolean applyToInventory,
+      String location
   ) {
     String key = ingredientKey == null ? "" : ingredientKey.trim();
     if (key.isEmpty()) {
@@ -115,7 +116,7 @@ public class PurchaseService {
           ingredient.getName(),
           amount,
           sanitizedUnit,
-          null,
+          location,
           "purchase"
       );
     }

@@ -37,21 +37,6 @@ const EMPTY_FORM: InventoryFormState = {
   notes: "",
 };
 
-const DEFAULT_CATEGORIES = [
-  "Крупи/хліб/борошно",
-  "Соуси/спеції/консервація",
-  "Овочі/фрукти",
-  "Молочне",
-  "Солодке",
-  "Білок",
-  "Жири/олії",
-  "Заморожене",
-  "Інше",
-];
-
-const DEFAULT_LOCATIONS = ["Комора", "Холодильник", "Морозилка"];
-
-const DEFAULT_UNITS = ["шт", "кг", "г", "л", "мл", "упак", "пачка"];
 const DEFAULT_VISIBLE_PRODUCTS = 10;
 
 function normalizeKey(value: string): string {
@@ -102,10 +87,15 @@ function eventTone(event: InventoryEvent, today: Date): string {
 
 type InventoryPageProps = {
   ingredientOptions: IngredientOption[];
+  categories: string[];
+  locations: string[];
+  units: string[];
 };
 
-export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
+export function InventoryPage({ ingredientOptions, categories, locations, units }: InventoryPageProps) {
   const { t, language } = useTranslation();
+  const defaultUnit = units[0] ?? "";
+  const defaultLocation = locations[0] ?? "";
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -225,23 +215,50 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
     };
   }, [activeTab]);
 
-  const categories = useMemo(() => {
-    const unique = new Set<string>();
-    DEFAULT_CATEGORIES.forEach((value) => unique.add(value));
+  const categoryOptions = useMemo(() => {
+    const unique = new Set<string>(categories);
     items.forEach((item) => {
       if (item.category) unique.add(item.category);
     });
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [items]);
+  }, [categories, items]);
 
-  const locations = useMemo(() => {
-    const unique = new Set<string>();
-    DEFAULT_LOCATIONS.forEach((value) => unique.add(value));
+  const locationOptions = useMemo(() => {
+    const unique = new Set<string>(locations);
     items.forEach((item) => {
       if (item.location) unique.add(item.location);
     });
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [items]);
+  }, [locations, items]);
+
+  const unitOptions = useMemo(() => {
+    const unique = new Set<string>(units);
+    items.forEach((item) => {
+      if (item.unit) unique.add(item.unit);
+    });
+    return Array.from(unique);
+  }, [units, items]);
+
+  const petUnitOptions = useMemo(() => {
+    const unique = new Set<string>(units);
+    petItems.forEach((item) => {
+      if (item.weightUnit) unique.add(item.weightUnit);
+    });
+    return Array.from(unique);
+  }, [units, petItems]);
+
+  useEffect(() => {
+    if (!formOpen || formMode !== "create") return;
+    setFormData((prev) => ({
+      ...prev,
+      unit: prev.unit || defaultUnit,
+      location: prev.location || defaultLocation,
+    }));
+  }, [formOpen, formMode, defaultUnit, defaultLocation]);
+
+  const formCategoryOptions = formMode === "edit" ? categoryOptions : categories;
+  const formLocationOptions = formMode === "edit" ? locationOptions : locations;
+  const formUnitOptions = formMode === "edit" ? unitOptions : units;
 
   const filteredItems = useMemo(() => {
     return items
@@ -327,6 +344,11 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
     return map;
   }, [ingredientOptions]);
 
+  const formatUnit = (value: string): string => {
+    const label = t(`units.${value}`);
+    return label.startsWith("units.") ? value : label;
+  };
+
   function updateFilter<K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
@@ -334,7 +356,11 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
   function openCreate() {
     setFormMode("create");
     setEditingId(null);
-    setFormData(EMPTY_FORM);
+    setFormData({
+      ...EMPTY_FORM,
+      unit: defaultUnit,
+      location: defaultLocation,
+    });
     setFormError(null);
     setFormOpen(true);
   }
@@ -725,7 +751,7 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
               onChange={(event) => updateFilter("category", event.target.value)}
             >
               <option value="all">{t("inventory.filters.all")}</option>
-              {categories.map((category) => (
+              {categoryOptions.map((category) => (
                 <option key={category} value={category}>
                   {category}
                 </option>
@@ -742,7 +768,7 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
               onChange={(event) => updateFilter("location", event.target.value)}
             >
               <option value="all">{t("inventory.filters.all")}</option>
-              {locations.map((location) => (
+              {locationOptions.map((location) => (
                 <option key={location} value={location}>
                   {location}
                 </option>
@@ -830,7 +856,7 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                                 </div>
                               </td>
                               <td className="px-3 py-2">
-                                {item.quantity} {item.unit}
+                                {item.quantity} {formatUnit(item.unit)}
                               </td>
                               <td className="px-3 py-2">
                                 {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
@@ -842,7 +868,7 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                                 </div>
                               </td>
                               <td className="px-3 py-2">
-                                {toBuy > 0 ? `${toBuy} ${item.unit}` : "—"}
+                                {toBuy > 0 ? `${toBuy} ${formatUnit(item.unit)}` : "—"}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <div className="flex justify-end gap-2">
@@ -1094,21 +1120,33 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.category")}</label>
-                  <input
+                  <select
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    list="inventory-category-options"
                     value={formData.category}
                     onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
-                  />
+                  >
+                    <option value="">{t("inventory.table.unknown")}</option>
+                    {formCategoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.location")}</label>
-                  <input
+                  <select
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    list="inventory-location-options"
                     value={formData.location}
                     onChange={(event) => setFormData((prev) => ({ ...prev, location: event.target.value }))}
-                  />
+                  >
+                    <option value="">{t("inventory.table.unknown")}</option>
+                    {formLocationOptions.map((location) => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.quantity")}</label>
@@ -1122,12 +1160,18 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.unit")}</label>
-                  <input
+                  <select
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    list="inventory-unit-options"
                     value={formData.unit}
                     onChange={(event) => handleUnitChange(event.target.value)}
-                  />
+                  >
+                    <option value="">{t("inventory.table.unknown")}</option>
+                    {formUnitOptions.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {formatUnit(unit)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.form.fields.minQty")}</label>
@@ -1168,21 +1212,6 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                   />
                 </div>
               </div>
-              <datalist id="inventory-category-options">
-                {DEFAULT_CATEGORIES.map((category) => (
-                  <option key={category} value={category} />
-                ))}
-              </datalist>
-              <datalist id="inventory-location-options">
-                {DEFAULT_LOCATIONS.map((location) => (
-                  <option key={location} value={location} />
-                ))}
-              </datalist>
-              <datalist id="inventory-unit-options">
-                {DEFAULT_UNITS.map((unit) => (
-                  <option key={unit} value={unit} />
-                ))}
-              </datalist>
               {formError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {formError}
@@ -1360,13 +1389,20 @@ export function InventoryPage({ ingredientOptions }: InventoryPageProps) {
                   <label className="text-sm text-gray-600">
                     {t("inventory.pet.form.fields.weightUnit")}
                   </label>
-                  <input
+                  <select
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     value={petFormData.weightUnit}
                     onChange={(event) =>
                       setPetFormData((prev) => ({ ...prev, weightUnit: event.target.value }))
                     }
-                  />
+                  >
+                    <option value="">{t("inventory.table.unknown")}</option>
+                    {petUnitOptions.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {formatUnit(unit)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">

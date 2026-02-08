@@ -4,6 +4,8 @@ import {useCallback, useEffect, useState} from "react";
 import "./App.css";
 import {api, UnauthorizedError} from "./api";
 import {useTranslation} from "./i18n";
+import { MEASUREMENT_UNITS } from "./constants/measurementUnits";
+import { INVENTORY_CATEGORIES, INVENTORY_LOCATIONS } from "./constants/inventoryDefaults";
 
 import {HeaderMenu} from "./components/HeaderMenu";
 import {LanguageSwitcher} from "./components/LanguageSwitcher";
@@ -27,6 +29,7 @@ import type {
     Dish,
     IngredientOption,
     PurchaseEntry,
+    ReferenceData,
     ShoppingListResponse,
     UserProfile,
 } from "./types";
@@ -51,6 +54,7 @@ function App() {
     const [ingredientOptions, setIngredientOptions] = useState<IngredientOption[]>([]);
     const [calorieEntries, setCalorieEntries] = useState<CalorieEntry[]>([]);
     const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
+    const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
 
     const [loadingData, setLoadingData] = useState(false);
     const [globalError, setGlobalError] = useState<string | null>(null);
@@ -66,6 +70,7 @@ function App() {
         setIngredientOptions([]);
         setCalorieEntries([]);
         setPurchases([]);
+        setReferenceData(null);
     }, []);
 
     const loadAllData = useCallback(async () => {
@@ -73,6 +78,10 @@ function App() {
         setGlobalError(null);
 
         try {
+            void api.getReferenceData()
+                .then((data) => setReferenceData(data))
+                .catch((error) => console.error(error));
+
             const [dishesRes, plansRes, ingredientsRes, caloriesRes, purchasesRes] = await Promise.all([
                 api.listDishes(),
                 api.listPlans(),
@@ -107,6 +116,14 @@ function App() {
             setLoadingData(false);
         }
     }, [t, handleLogout]);
+
+    const referenceUnits = referenceData?.units?.length ? referenceData.units : MEASUREMENT_UNITS;
+    const referenceCategories = referenceData?.inventoryCategories?.length
+        ? referenceData.inventoryCategories
+        : INVENTORY_CATEGORIES;
+    const referenceLocations = referenceData?.inventoryLocations?.length
+        ? referenceData.inventoryLocations
+        : INVENTORY_LOCATIONS;
 
     useEffect(() => {
         // Автовідновлення сесії, якщо токен уже є
@@ -440,6 +457,7 @@ function App() {
         price: number;
         purchasedAt: string;
         applyToInventory: boolean;
+        location?: string;
     }): Promise<void> {
         try {
             await api.createPurchase(payload);
@@ -598,6 +616,7 @@ function App() {
                             onUpsertDish={handleUpsertDish}
                             onDeleteDish={handleDeleteDish}
                             ingredientOptions={ingredientOptions}
+                            units={referenceUnits}
                         />
                     )}
                     {activeTab === "shopping" && (
@@ -609,6 +628,7 @@ function App() {
                     {activeTab === "ingredients" && (
                         <IngredientsPage
                             ingredients={ingredientOptions}
+                            units={referenceUnits}
                             onAddIngredient={handleAddIngredient}
                             onUpdateIngredient={handleUpdateIngredient}
                         />
@@ -617,6 +637,7 @@ function App() {
                         <CaloriesPage
                             ingredients={ingredientOptions}
                             entries={calorieEntries}
+                            units={referenceUnits}
                             onAddEntry={handleAddCalorieEntry}
                             onUpdateEntry={handleUpdateCalorieEntry}
                         />
@@ -625,6 +646,8 @@ function App() {
                         <PurchasesPage
                             ingredients={ingredientOptions}
                             purchases={purchases}
+                            units={referenceUnits}
+                            locations={referenceLocations}
                             onCreatePurchase={handleCreatePurchase}
                             onRefresh={refreshPurchases}
                         />
@@ -652,7 +675,12 @@ function App() {
                         />
                     )}
                     {activeTab === "inventory" && (
-                        <InventoryPage ingredientOptions={ingredientOptions} />
+                        <InventoryPage
+                            ingredientOptions={ingredientOptions}
+                            categories={referenceCategories}
+                            locations={referenceLocations}
+                            units={referenceUnits}
+                        />
                     )}
                 </div>
             </main>

@@ -92,3 +92,13 @@ export interface PurchaseEntry {
   price: number;
   purchasedAt: string;
 }
+
+export interface ReferenceData {
+  units: string[];
+  inventoryCategories: string[];
+  inventoryLocations: string[];
+  unitConversions?: {
+    mass: Record<string, number>;
+    volume: Record<string, number>;
+  };
+}

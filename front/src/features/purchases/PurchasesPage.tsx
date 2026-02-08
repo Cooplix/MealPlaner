@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
+import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption, PurchaseEntry } from "../../types";
 import { getIngredientOptionLabel, getLocalizedIngredientName } from "../../utils/ingredientNames";
@@ -9,6 +9,8 @@ import { computeUnitPrice } from "../../utils/pricing";
 interface PurchasesPageProps {
   ingredients: IngredientOption[];
   purchases: PurchaseEntry[];
+  units: string[];
+  locations: string[];
   onCreatePurchase: (payload: {
     ingredientKey: string;
     amount: number;
@@ -16,6 +18,7 @@ interface PurchasesPageProps {
     price: number;
     purchasedAt: string;
     applyToInventory: boolean;
+    location?: string;
   }) => Promise<void>;
   onRefresh?: () => Promise<void>;
 }
@@ -29,11 +32,14 @@ interface FiltersState {
 interface FormState {
   ingredientKey: string;
   amount: string;
-  unit: MeasurementUnit;
+  unit: string;
   price: string;
   purchasedAt: string;
   applyToInventory: boolean;
+  location: string;
 }
+
+const DEFAULT_LOCATIONS = ["Комора", "Холодильник", "Морозилка"];
 
 function formatDateTimeLocal(date: Date): string {
   const pad = (value: number) => value.toString().padStart(2, "0");
@@ -50,18 +56,28 @@ function toIsoString(value: string): string {
   return parsed.toISOString();
 }
 
-export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefresh }: PurchasesPageProps) {
+export function PurchasesPage({
+  ingredients,
+  purchases,
+  units,
+  locations,
+  onCreatePurchase,
+  onRefresh,
+}: PurchasesPageProps) {
   const { t, language } = useTranslation();
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
+  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
+  const locationOptions = locations.length ? locations : DEFAULT_LOCATIONS;
 
   const initialIngredient = ingredients[0];
   const [formState, setFormState] = useState<FormState>(() => ({
     ingredientKey: initialIngredient?.key ?? "",
     amount: "1",
-    unit: (initialIngredient?.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+    unit: initialIngredient?.unit ?? unitOptions[0] ?? "",
     price: "",
     purchasedAt: formatDateTimeLocal(new Date()),
     applyToInventory: true,
+    location: locationOptions[0] ?? "",
   }));
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -104,10 +120,30 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
       setFormState((prev) => ({
         ...prev,
         ingredientKey: fallback.key,
-        unit: (fallback.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+        unit: fallback.unit ?? unitOptions[0] ?? "",
       }));
     }
-  }, [ingredients, ingredientMap, formState.ingredientKey]);
+  }, [ingredients, ingredientMap, formState.ingredientKey, unitOptions]);
+
+  useEffect(() => {
+    if (!unitOptions.length) return;
+    if (!formState.unit || !unitOptions.includes(formState.unit)) {
+      setFormState((prev) => ({
+        ...prev,
+        unit: unitOptions[0] ?? "",
+      }));
+    }
+  }, [unitOptions, formState.unit]);
+
+  useEffect(() => {
+    if (!locationOptions.length) return;
+    if (!formState.location || !locationOptions.includes(formState.location)) {
+      setFormState((prev) => ({
+        ...prev,
+        location: locationOptions[0] ?? "",
+      }));
+    }
+  }, [locationOptions, formState.location]);
 
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
@@ -179,6 +215,7 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
         price: parsedPrice,
         purchasedAt: toIsoString(formState.purchasedAt),
         applyToInventory: formState.applyToInventory,
+        location: formState.applyToInventory ? (formState.location.trim() || undefined) : undefined,
       });
       setFormSuccess(t("purchases.messages.saved") as string);
       setFormState((prev) => ({
@@ -249,7 +286,7 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
                 const ingredient = ingredientMap.get(key);
                 handleFormChange({
                   ingredientKey: key,
-                  unit: (ingredient?.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+                  unit: ingredient?.unit ?? unitOptions[0] ?? "",
                 });
               }}
             >
@@ -280,9 +317,9 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
               id="purchase-unit"
               className="mt-1 w-full rounded-xl border px-3 py-2"
               value={formState.unit}
-              onChange={(event) => handleFormChange({ unit: event.target.value as MeasurementUnit })}
+              onChange={(event) => handleFormChange({ unit: event.target.value })}
             >
-              {MEASUREMENT_UNITS.map((value) => (
+              {unitOptions.map((value) => (
                 <option key={value} value={value}>
                   {formatUnit(value)}
                 </option>
@@ -312,6 +349,24 @@ export function PurchasesPage({ ingredients, purchases, onCreatePurchase, onRefr
               value={formState.purchasedAt}
               onChange={(event) => handleFormChange({ purchasedAt: event.target.value })}
             />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm text-gray-600" htmlFor="purchase-location">
+              {t("inventory.form.fields.location")}
+            </label>
+            <select
+              id="purchase-location"
+              className="mt-1 w-full rounded-xl border px-3 py-2"
+              value={formState.location}
+              onChange={(event) => handleFormChange({ location: event.target.value })}
+              disabled={!formState.applyToInventory}
+            >
+              {locationOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="md:col-span-5 flex flex-wrap items-center gap-3">
             <button

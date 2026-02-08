@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
-import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
+import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
 import { getIngredientOptionLabel } from "../../utils/ingredientNames";
 
 interface IngredientsPageProps {
   ingredients: IngredientOption[];
-  onAddIngredient: (payload: { name: string; unit: MeasurementUnit }) => void;
-  onUpdateIngredient: (payload: { key: string; name: string; unit: MeasurementUnit }) => void;
+  units: string[];
+  onAddIngredient: (payload: { name: string; unit: string }) => void;
+  onUpdateIngredient: (payload: { key: string; name: string; unit: string }) => void;
 }
 
-type Draft = { name: string; unit: MeasurementUnit };
+type Draft = { name: string; unit: string };
 
-export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredient }: IngredientsPageProps) {
+export function IngredientsPage({ ingredients, units, onAddIngredient, onUpdateIngredient }: IngredientsPageProps) {
   const { t, language } = useTranslation();
+  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
   const [name, setName] = useState("");
-  const [unit, setUnit] = useState<MeasurementUnit>(MEASUREMENT_UNITS[0]);
+  const [unit, setUnit] = useState<string>(unitOptions[0] ?? "");
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
@@ -43,20 +45,25 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
   useEffect(() => {
     const next: Record<string, Draft> = {};
     ingredients.forEach((ingredient) => {
-      const unit = MEASUREMENT_UNITS.includes(ingredient.unit as MeasurementUnit)
-        ? (ingredient.unit as MeasurementUnit)
-        : MEASUREMENT_UNITS[0];
+      const unit = unitOptions.includes(ingredient.unit) ? ingredient.unit : unitOptions[0] ?? "";
       next[ingredient.key] = {
         name: ingredient.name,
         unit,
       };
     });
     setDrafts(next);
-  }, [ingredients]);
+  }, [ingredients, unitOptions]);
+
+  useEffect(() => {
+    if (!unitOptions.length) return;
+    if (!unitOptions.includes(unit)) {
+      setUnit(unitOptions[0] ?? "");
+    }
+  }, [unitOptions, unit]);
 
   function resetForm() {
     setName("");
-    setUnit(MEASUREMENT_UNITS[0]);
+    setUnit(unitOptions[0] ?? "");
     setError(null);
   }
 
@@ -76,7 +83,7 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
       ...prev,
       [ingredient.key]: {
         name: ingredient.name,
-        unit: (ingredient.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+        unit: ingredient.unit ?? unitOptions[0] ?? "",
       },
     }));
   }
@@ -128,9 +135,9 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
               id="ingredient-unit"
               className="w-full rounded-xl border px-3 py-2"
               value={unit}
-              onChange={(event) => setUnit(event.target.value as MeasurementUnit)}
+              onChange={(event) => setUnit(event.target.value)}
             >
-              {MEASUREMENT_UNITS.map((value) => (
+              {unitOptions.map((value) => (
                 <option key={value} value={value}>
                   {formatUnit(value)}
                 </option>
@@ -178,7 +185,7 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
                 {sortedIngredients.map((ingredient) => {
                   const draft = drafts[ingredient.key] ?? {
                     name: ingredient.name,
-                    unit: (ingredient.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+                    unit: ingredient.unit ?? unitOptions[0] ?? "",
                   };
                   const localizedName = optionLabel(ingredient);
                   const showSecondary = localizedName && localizedName !== ingredient.name;
@@ -224,13 +231,13 @@ export function IngredientsPage({ ingredients, onAddIngredient, onUpdateIngredie
                               ...prev,
                               [ingredient.key]: {
                                 ...draft,
-                                unit: event.target.value as MeasurementUnit,
+                                unit: event.target.value,
                               },
                             }))
                           }
                           onBlur={() => commitDraft(ingredient)}
                         >
-                          {MEASUREMENT_UNITS.map((value) => (
+                          {unitOptions.map((value) => (
                             <option key={value} value={value}>
                               {formatUnit(value)}
                             </option>

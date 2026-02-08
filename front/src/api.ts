@@ -4,6 +4,7 @@ import type {
     Dish,
     IngredientOption,
     PurchaseEntry,
+    ReferenceData,
     ShoppingListResponse,
     TokenResponse,
     UserProfile,
@@ -272,10 +273,15 @@ export const api = {
         price: number;
         purchasedAt: string;
         applyToInventory: boolean;
+        location?: string;
     }): Promise<PurchaseEntry> {
         return request<PurchaseEntry>("/purchases", {
             method: "POST",
             body: JSON.stringify(payload),
         });
+    },
+
+    async getReferenceData(): Promise<ReferenceData> {
+        return request<ReferenceData>("/reference-data");
     },
 };

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
-import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
+import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { CalorieEntry, IngredientOption } from "../../types";
 import { getIngredientOptionLabel } from "../../utils/ingredientNames";
@@ -9,6 +9,7 @@ import { getIngredientOptionLabel } from "../../utils/ingredientNames";
 interface CaloriesPageProps {
   ingredients: IngredientOption[];
   entries: CalorieEntry[];
+  units: string[];
   onAddEntry: (payload: {
     ingredientKey: string;
     amount: number;
@@ -27,15 +28,16 @@ interface CaloriesPageProps {
 type Draft = {
   ingredientKey: string;
   amount: string;
-  unit: MeasurementUnit;
+  unit: string;
   calories: string;
 };
 
-export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }: CaloriesPageProps) {
+export function CaloriesPage({ ingredients, entries, units, onAddEntry, onUpdateEntry }: CaloriesPageProps) {
   const { t, language } = useTranslation();
+  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
   const [ingredientKey, setIngredientKey] = useState<string>("");
   const [amount, setAmount] = useState<string>("100");
-  const [unit, setUnit] = useState<MeasurementUnit>(MEASUREMENT_UNITS[0]);
+  const [unit, setUnit] = useState<string>(unitOptions[0] ?? "");
   const [calories, setCalories] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -78,17 +80,24 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
       next[entry.id] = {
         ingredientKey: entry.ingredientKey,
         amount: String(entry.amount),
-        unit: (entry.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+        unit: entry.unit ?? unitOptions[0] ?? "",
         calories: String(entry.calories),
       };
     });
     setDrafts(next);
-  }, [entries]);
+  }, [entries, unitOptions]);
+
+  useEffect(() => {
+    if (!unitOptions.length) return;
+    if (!unitOptions.includes(unit)) {
+      setUnit(unitOptions[0] ?? "");
+    }
+  }, [unitOptions, unit]);
 
   function resetForm() {
     setIngredientKey(ingredients[0]?.key ?? "");
     setAmount("100");
-    setUnit(MEASUREMENT_UNITS[0]);
+    setUnit(unitOptions[0] ?? "");
     setCalories("");
     setError(null);
   }
@@ -119,7 +128,7 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
       [entry.id]: {
         ingredientKey: entry.ingredientKey,
         amount: String(entry.amount),
-        unit: (entry.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+        unit: entry.unit ?? unitOptions[0] ?? "",
         calories: String(entry.calories),
       },
     }));
@@ -212,9 +221,9 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
               id="calorie-unit"
               className="w-full rounded-xl border px-3 py-2"
               value={unit}
-              onChange={(event) => setUnit(event.target.value as MeasurementUnit)}
+              onChange={(event) => setUnit(event.target.value)}
             >
-              {MEASUREMENT_UNITS.map((value) => (
+              {unitOptions.map((value) => (
                 <option key={value} value={value}>
                   {formatUnit(value)}
                 </option>
@@ -279,7 +288,7 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
                   const draft = drafts[entry.id] ?? {
                     ingredientKey: entry.ingredientKey,
                     amount: String(entry.amount),
-                    unit: (entry.unit as MeasurementUnit) ?? MEASUREMENT_UNITS[0],
+                    unit: entry.unit ?? unitOptions[0] ?? "",
                     calories: String(entry.calories),
                   };
 
@@ -353,13 +362,13 @@ export function CaloriesPage({ ingredients, entries, onAddEntry, onUpdateEntry }
                               ...prev,
                               [entry.id]: {
                                 ...draft,
-                                unit: event.target.value as MeasurementUnit,
+                                unit: event.target.value,
                               },
                             }))
                           }
                           onBlur={() => commitDraft(entry)}
                         >
-                          {MEASUREMENT_UNITS.map((value) => (
+                          {unitOptions.map((value) => (
                             <option key={value} value={value}>
                               {formatUnit(value)}
                             </option>

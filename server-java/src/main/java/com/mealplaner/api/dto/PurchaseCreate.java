@@ -16,6 +16,8 @@ public class PurchaseCreate {
   @JsonProperty("applyToInventory")
   private boolean applyToInventory;
 
+  private String location;
+
   public String getIngredientKey() {
     return ingredientKey;
   }
@@ -62,5 +64,13 @@ public class PurchaseCreate {
 
   public void setApplyToInventory(boolean applyToInventory) {
     this.applyToInventory = applyToInventory;
+  }
+
+  public String getLocation() {
+    return location;
+  }
+
+  public void setLocation(String location) {
+    this.location = location;
   }
 }

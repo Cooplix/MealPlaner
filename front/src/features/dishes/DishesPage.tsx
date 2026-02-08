@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
-import { MEASUREMENT_UNITS, type MeasurementUnit } from "../../constants/measurementUnits";
+import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { DayPlan, Dish, Ingredient, IngredientOption, MealSlot } from "../../types";
 import { findIngredientOption } from "../../utils/ingredientNames";
@@ -13,6 +13,7 @@ interface DishesPageProps {
   onUpsertDish: (dish: Dish) => Promise<void>;
   onDeleteDish: (id: string) => Promise<void>;
   ingredientOptions: IngredientOption[];
+  units: string[];
 }
 
 function normalizeKey(value: string): string {
@@ -31,12 +32,20 @@ function resolveIngredientKey(ingredient: Ingredient): string | null {
   return buildIngredientKey(ingredient.name, ingredient.unit);
 }
 
-export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredientOptions }: DishesPageProps) {
+export function DishesPage({
+  dishes,
+  plans,
+  onUpsertDish,
+  onDeleteDish,
+  ingredientOptions,
+  units,
+}: DishesPageProps) {
   const [editing, setEditing] = useState<Dish | null>(null);
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
   const { t, language } = useTranslation();
+  const unitOptions = units.length ? units : MEASUREMENT_UNITS;
 
   const optionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
@@ -157,6 +166,7 @@ export function DishesPage({ dishes, plans, onUpsertDish, onDeleteDish, ingredie
           onSave={saveDish}
           saving={busyId === editing.id}
           ingredientOptions={ingredientOptions}
+          unitOptions={unitOptions}
         />
       )}
 
@@ -223,9 +233,10 @@ interface DishEditorProps {
   onSave: (dish: Dish) => Promise<void>;
   onCancel: () => void;
   ingredientOptions: IngredientOption[];
+  unitOptions: string[];
 }
 
-function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishEditorProps) {
+function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOptions }: DishEditorProps) {
   const [state, setState] = useState<Dish>(() => ({
     ...dish,
     calories: dish.calories ?? 0,
@@ -271,7 +282,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
       ...prev,
       ingredients: [
         ...prev.ingredients,
-        { id: uid("ing"), name: "", unit: MEASUREMENT_UNITS[0], qty: 100, ingredientKey: undefined },
+        { id: uid("ing"), name: "", unit: unitOptions[0] ?? "", qty: 100, ingredientKey: undefined },
       ],
     }));
   }
@@ -371,9 +382,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
     ingredients.forEach((ingredient) => {
       const name = ingredient.name.trim();
       const normalizedUnit = (ingredient.unit || "").trim();
-      const unit = MEASUREMENT_UNITS.includes(normalizedUnit as MeasurementUnit)
-        ? (normalizedUnit as MeasurementUnit)
-        : MEASUREMENT_UNITS[0];
+      const unit = unitOptions.includes(normalizedUnit) ? normalizedUnit : unitOptions[0] ?? "";
       if (!name || !unit) {
         return;
       }
@@ -514,10 +523,10 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions }: DishE
                 className="rounded-xl border px-3 py-2 sm:col-span-3"
                 value={ingredient.unit}
                 onChange={(event) =>
-                  updateIngredient(ingredient.id, { unit: event.target.value as MeasurementUnit })
+                  updateIngredient(ingredient.id, { unit: event.target.value })
                 }
               >
-                {MEASUREMENT_UNITS.map((value) => (
+                {unitOptions.map((value) => (
                   <option key={value} value={value}>
                     {formatUnit(value)}
                   </option>
