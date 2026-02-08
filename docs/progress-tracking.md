@@ -17,7 +17,7 @@ Single source of truth for implementation progress across all active plans.
 | Track | Source Doc | Current Step | Status | Next Action |
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
-| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 8 | planned | Unified events feed with priorities |
+| Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 9 | planned | Data migration + cutover prep |
 | UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 1 | planned | UI audit and token spec |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
@@ -25,6 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-08 | Functions Unification | Step 8: unified events feed with priorities (expiry/restock/critical/expensive) | completed | Not run (not requested) | a92fd51 |
 | 2026-02-08 | Functions Unification | Step 7: backend analytics aggregation + frontend analytics views | completed | Not run (not requested) | 5a7fbd5 |
 | 2026-02-08 | Functions Unification | Step 6: shopping list grouped by category with purchase builder + auto-refresh | completed | Not run (not requested) | 05b6803 |
 | 2026-02-08 | Process / Maintenance | Fixed build errors after reference data rollout (readonly units + inventory lambda) | completed | `/opt/MealPlaner/scripts/app-java-up.sh` | 25d6158 |
