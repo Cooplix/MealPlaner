@@ -69,6 +69,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         error: "Failed to load inventory: {{message}}",
         unknown: "Unknown",
         count: "{{count}} items",
+        showMore: "Show more",
         columns: {
           name: "Item",
           quantity: "Qty",
@@ -623,6 +624,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         error: "Не вдалося завантажити інвентар: {{message}}",
         unknown: "Невідомо",
         count: "{{count}} позицій",
+        showMore: "Показати ще",
         columns: {
           name: "Позиція",
           quantity: "К-ть",
@@ -1177,6 +1179,7 @@ export const translations: Record<Language, Record<string, unknown>> = {
         error: "Nie udało się wczytać zapasów: {{message}}",
         unknown: "Nieznane",
         count: "{{count}} pozycji",
+        showMore: "Pokaż więcej",
         columns: {
           name: "Pozycja",
           quantity: "Ilość",

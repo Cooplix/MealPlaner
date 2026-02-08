@@ -48,6 +48,7 @@ const DEFAULT_CATEGORIES = [
 const DEFAULT_LOCATIONS = ["Комора", "Холодильник", "Морозилка"];
 
 const DEFAULT_UNITS = ["шт", "кг", "г", "л", "мл", "упак", "пачка"];
+const DEFAULT_VISIBLE_PRODUCTS = 10;
 
 type ConsumeFormState = {
   itemId: string | null;
@@ -138,6 +139,7 @@ export function InventoryPage() {
     location: "all",
     status: "all",
   });
+  const [visibleProductsCount, setVisibleProductsCount] = useState(DEFAULT_VISIBLE_PRODUCTS);
   const hints = useMemo(() => {
     return [
       t("inventory.hints.products"),
@@ -226,7 +228,8 @@ export function InventoryPage() {
   }, [items]);
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    return items
+      .filter((item) => {
       const search = filters.search.trim().toLowerCase();
       if (search) {
         const hay = `${item.name} ${item.baseName ?? ""}`.toLowerCase();
@@ -244,8 +247,24 @@ export function InventoryPage() {
         if (filters.status === "restock" && restock !== "RESTOCK") return false;
       }
       return true;
-    });
-  }, [items, filters]);
+    })
+      .sort((left, right) => {
+        const leftCategory = left.category?.trim() || "\uffff";
+        const rightCategory = right.category?.trim() || "\uffff";
+        const byCategory = leftCategory.localeCompare(rightCategory, locale, { sensitivity: "base" });
+        if (byCategory !== 0) return byCategory;
+        return left.name.localeCompare(right.name, locale, { sensitivity: "base" });
+      });
+  }, [items, filters, locale]);
+
+  const visibleFilteredItems = useMemo(
+    () => filteredItems.slice(0, visibleProductsCount),
+    [filteredItems, visibleProductsCount],
+  );
+
+  useEffect(() => {
+    setVisibleProductsCount(DEFAULT_VISIBLE_PRODUCTS);
+  }, [activeTab, filters.search, filters.category, filters.location, filters.status]);
 
   const upcomingEvents = useMemo<InventoryEvent[]>(() => {
     const now = new Date();
@@ -695,78 +714,93 @@ export function InventoryPage() {
                 </div>
               )}
               {!loading && !error && filteredItems.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-                      <tr>
-                        <th className="px-3 py-2">{t("inventory.table.columns.name")}</th>
-                        <th className="px-3 py-2">{t("inventory.table.columns.quantity")}</th>
-                        <th className="px-3 py-2">{t("inventory.table.columns.expiry")}</th>
-                        <th className="px-3 py-2">{t("inventory.table.columns.status")}</th>
-                        <th className="px-3 py-2">{t("inventory.table.columns.toBuy")}</th>
-                        <th className="px-3 py-2 text-right">{t("inventory.table.columns.actions")}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {filteredItems.map((item) => {
-                        const expiry = getExpiryStatus(item.expiresAt);
-                        const restock = getRestockStatus(item.quantity, item.minQty);
-                        const toBuy = getToBuy(item.quantity, item.minQty, item.maxQty);
-                        return (
-                          <tr key={item.id} className="bg-white">
-                            <td className="px-3 py-2">
-                              <div className="font-medium text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {item.category ?? t("inventory.table.unknown")}
-                                {" · "}
-                                {item.location ?? t("inventory.table.unknown")}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              {item.quantity} {item.unit}
-                            </td>
-                            <td className="px-3 py-2">
-                              {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex flex-col text-xs text-gray-600">
-                                <span>{t(`inventory.status.expiry.${expiry}`)}</span>
-                                <span>{t(`inventory.status.restock.${restock}`)}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              {toBuy > 0 ? `${toBuy} ${item.unit}` : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  type="button"
-                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
-                                  onClick={() => openConsume(item)}
-                                >
-                                  {t("inventory.consume.button")}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
-                                  onClick={() => openEdit(item)}
-                                >
-                                  {t("inventory.form.editButton")}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="text-xs font-medium text-red-600 hover:text-red-700"
-                                  onClick={() => deleteItem(item)}
-                                >
-                                  {t("inventory.form.deleteButton")}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="space-y-3">
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                        <tr>
+                          <th className="px-3 py-2">{t("inventory.table.columns.name")}</th>
+                          <th className="px-3 py-2">{t("inventory.table.columns.quantity")}</th>
+                          <th className="px-3 py-2">{t("inventory.table.columns.expiry")}</th>
+                          <th className="px-3 py-2">{t("inventory.table.columns.status")}</th>
+                          <th className="px-3 py-2">{t("inventory.table.columns.toBuy")}</th>
+                          <th className="px-3 py-2 text-right">{t("inventory.table.columns.actions")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {visibleFilteredItems.map((item) => {
+                          const expiry = getExpiryStatus(item.expiresAt);
+                          const restock = getRestockStatus(item.quantity, item.minQty);
+                          const toBuy = getToBuy(item.quantity, item.minQty, item.maxQty);
+                          return (
+                            <tr key={item.id} className="bg-white">
+                              <td className="px-3 py-2">
+                                <div className="font-medium text-gray-900">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.category ?? t("inventory.table.unknown")}
+                                  {" · "}
+                                  {item.location ?? t("inventory.table.unknown")}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                {item.quantity} {item.unit}
+                              </td>
+                              <td className="px-3 py-2">
+                                {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex flex-col text-xs text-gray-600">
+                                  <span>{t(`inventory.status.expiry.${expiry}`)}</span>
+                                  <span>{t(`inventory.status.restock.${restock}`)}</span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                {toBuy > 0 ? `${toBuy} ${item.unit}` : "—"}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                    onClick={() => openConsume(item)}
+                                  >
+                                    {t("inventory.consume.button")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                                    onClick={() => openEdit(item)}
+                                  >
+                                    {t("inventory.form.editButton")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-xs font-medium text-red-600 hover:text-red-700"
+                                    onClick={() => deleteItem(item)}
+                                  >
+                                    {t("inventory.form.deleteButton")}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {visibleProductsCount < filteredItems.length && (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        onClick={() =>
+                          setVisibleProductsCount((prev) => Math.min(prev + DEFAULT_VISIBLE_PRODUCTS, filteredItems.length))
+                        }
+                      >
+                        {t("inventory.table.showMore")}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
