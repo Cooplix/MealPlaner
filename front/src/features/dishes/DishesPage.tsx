@@ -280,7 +280,7 @@ export function DishesPage({
             }
           }}
         >
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl bg-white p-6 shadow-xl flex flex-col">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -297,7 +297,7 @@ export function DishesPage({
                 ✕
               </button>
             </div>
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 flex-1 overflow-y-auto pr-1">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {t("dishes.editor.ingredientsTitle")}
