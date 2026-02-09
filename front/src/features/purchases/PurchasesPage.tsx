@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
