@@ -50,7 +50,12 @@ export function ShoppingPage({
   const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchasedAt, setPurchasedAt] = useState<string>(() => formatDateTimeLocal(new Date()));
+  const [sortMode, setSortMode] = useState("nameAsc");
   const { t, language } = useTranslation();
+  const collator = useMemo(
+    () => new Intl.Collator(language, { sensitivity: "base" }),
+    [language],
+  );
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
@@ -67,8 +72,13 @@ export function ShoppingPage({
     inventoryItems.forEach((item) => {
       if (item.location) unique.add(item.location);
     });
-    return Array.from(unique);
-  }, [locations, inventoryItems]);
+    return Array.from(unique).sort((a, b) => collator.compare(a, b));
+  }, [locations, inventoryItems, collator]);
+
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => collator.compare(a, b)),
+    [categories, collator],
+  );
   const localizedItems = useMemo(
     () =>
       items.map((item) => ({
@@ -202,7 +212,7 @@ export function ShoppingPage({
 
     const ordered: Array<{ category: string; entries: typeof localizedItems }> = [];
     const seen = new Set<string>();
-    categories.forEach((category) => {
+    sortedCategories.forEach((category) => {
       const entries = groups.get(category);
       if (entries && entries.length) {
         ordered.push({ category, entries });
@@ -217,7 +227,62 @@ export function ShoppingPage({
       ordered.push({ category: unknownCategory, entries: groups.get(unknownCategory) ?? [] });
     }
     return ordered;
-  }, [localizedItems, categoryLookup, categories, unknownCategory]);
+  }, [localizedItems, categoryLookup, sortedCategories, unknownCategory]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "nameAsc", label: t("shopping.sort.options.nameAsc") as string },
+      { value: "nameDesc", label: t("shopping.sort.options.nameDesc") as string },
+      { value: "toBuyDesc", label: t("shopping.sort.options.toBuyDesc") as string },
+      { value: "toBuyAsc", label: t("shopping.sort.options.toBuyAsc") as string },
+      { value: "requiredDesc", label: t("shopping.sort.options.requiredDesc") as string },
+      { value: "requiredAsc", label: t("shopping.sort.options.requiredAsc") as string },
+      { value: "inStockDesc", label: t("shopping.sort.options.inStockDesc") as string },
+      { value: "inStockAsc", label: t("shopping.sort.options.inStockAsc") as string },
+    ],
+    [t],
+  );
+
+  const sortedGroupedItems = useMemo(() => {
+    const sortEntries = (entries: typeof localizedItems) => {
+      const list = entries.slice();
+      list.sort((left, right) => {
+        const leftName = left.displayName ?? "";
+        const rightName = right.displayName ?? "";
+        const leftRequired = Number.isFinite(left.requiredQty) ? left.requiredQty : left.item.qty;
+        const rightRequired = Number.isFinite(right.requiredQty) ? right.requiredQty : right.item.qty;
+        const leftInStock = Number.isFinite(left.inStockQty) ? left.inStockQty : 0;
+        const rightInStock = Number.isFinite(right.inStockQty) ? right.inStockQty : 0;
+        const leftToBuy = Number.isFinite(left.toBuyQty) ? left.toBuyQty : left.item.qty;
+        const rightToBuy = Number.isFinite(right.toBuyQty) ? right.toBuyQty : right.item.qty;
+
+        switch (sortMode) {
+          case "nameDesc":
+            return collator.compare(rightName, leftName);
+          case "toBuyDesc":
+            return rightToBuy - leftToBuy;
+          case "toBuyAsc":
+            return leftToBuy - rightToBuy;
+          case "requiredDesc":
+            return rightRequired - leftRequired;
+          case "requiredAsc":
+            return leftRequired - rightRequired;
+          case "inStockDesc":
+            return rightInStock - leftInStock;
+          case "inStockAsc":
+            return leftInStock - rightInStock;
+          case "nameAsc":
+          default:
+            return collator.compare(leftName, rightName);
+        }
+      });
+      return list;
+    };
+    return groupedItems.map((group) => ({
+      category: group.category,
+      entries: sortEntries(group.entries),
+    }));
+  }, [groupedItems, collator, sortMode]);
 
   const selectedEntries = useMemo(
     () =>
@@ -227,6 +292,14 @@ export function ShoppingPage({
         return typeof toBuyQty === "number" ? toBuyQty > 0 : item.qty > 0;
       }),
     [localizedItems, checked],
+  );
+
+  const sortedSelectedEntries = useMemo(
+    () =>
+      selectedEntries
+        .slice()
+        .sort((left, right) => collator.compare(left.displayName ?? "", right.displayName ?? "")),
+    [selectedEntries, collator],
   );
 
   async function handleCreatePurchases() {
@@ -321,13 +394,29 @@ export function ShoppingPage({
       </div>
 
       <div className="rounded-2xl border bg-white p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-semibold text-gray-900">{t("shopping.title")}</h3>
-          <ExportButton
-            items={items}
-            disabled={!items.length}
-            resolveIngredientName={resolveIngredientName}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <span>{t("shopping.sort.label")}</span>
+              <select
+                className="rounded-xl border px-3 py-2 text-sm"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value)}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ExportButton
+              items={items}
+              disabled={!items.length}
+              resolveIngredientName={resolveIngredientName}
+            />
+          </div>
         </div>
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -336,14 +425,14 @@ export function ShoppingPage({
         )}
         {loading ? (
           <div className="text-gray-500">{t("shopping.loading")}</div>
-        ) : groupedItems.length ? (
+        ) : sortedGroupedItems.length ? (
           <div className="space-y-6">
             {inventoryError && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
                 {t("shopping.purchase.inventoryWarning", { message: inventoryError })}
               </div>
             )}
-            {groupedItems.map(({ category, entries }) => (
+            {sortedGroupedItems.map(({ category, entries }) => (
               <div key={category} className="space-y-2">
                 <div className="text-sm font-semibold text-gray-700">{category}</div>
                 <table className="w-full text-sm">
@@ -443,7 +532,7 @@ export function ShoppingPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedEntries.map(({ item, displayName }) => {
+                  {sortedSelectedEntries.map(({ item, displayName }) => {
                     const key = shoppingKey(item);
                     const draft = purchaseDrafts[key] ?? { amount: "", price: "" };
                     return (

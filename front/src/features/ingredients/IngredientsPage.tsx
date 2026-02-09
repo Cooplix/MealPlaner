@@ -17,22 +17,27 @@ type Draft = { name: string; unit: string };
 
 export function IngredientsPage({ ingredients, units, onAddIngredient, onUpdateIngredient }: IngredientsPageProps) {
   const { t, language } = useTranslation();
-  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
+  const formatUnit = useCallback(
+    (value: string): string => {
+      const label = t(`units.${value}`);
+      return label.startsWith("units.") ? value : label;
+    },
+    [t],
+  );
+  const collator = useMemo(() => new Intl.Collator(language), [language]);
+  const unitOptions = useMemo(() => {
+    const base = units.length ? units : Array.from(MEASUREMENT_UNITS);
+    return [...base].sort((a, b) => collator.compare(formatUnit(a), formatUnit(b)));
+  }, [units, collator, formatUnit]);
   const [name, setName] = useState("");
   const [unit, setUnit] = useState<string>(unitOptions[0] ?? "");
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
-  const collator = useMemo(() => new Intl.Collator(language), [language]);
   const optionLabel = useCallback(
     (ingredient: IngredientOption) => getIngredientOptionLabel(ingredient, language),
     [language],
   );
-
-  const formatUnit = (value: string): string => {
-    const label = t(`units.${value}`);
-    return label.startsWith("units.") ? value : label;
-  };
 
   const sortedIngredients = useMemo(
     () =>

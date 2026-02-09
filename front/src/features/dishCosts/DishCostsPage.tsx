@@ -36,9 +36,14 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
     minCost: "",
     maxCost: "",
   });
+  const [sortMode, setSortMode] = useState("costDesc");
   const [analytics, setAnalytics] = useState<DishCostAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const collator = useMemo(
+    () => new Intl.Collator(language, { sensitivity: "base" }),
+    [language],
+  );
 
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
@@ -90,6 +95,61 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
       return true;
     });
   }, [costStats.dishes, dishMap, filters, scheduledDishIds]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "nameAsc", label: t("dishCosts.sort.options.nameAsc") as string },
+      { value: "nameDesc", label: t("dishCosts.sort.options.nameDesc") as string },
+      { value: "costDesc", label: t("dishCosts.sort.options.costDesc") as string },
+      { value: "costAsc", label: t("dishCosts.sort.options.costAsc") as string },
+      { value: "caloriesDesc", label: t("dishCosts.sort.options.caloriesDesc") as string },
+      { value: "caloriesAsc", label: t("dishCosts.sort.options.caloriesAsc") as string },
+      { value: "missingDesc", label: t("dishCosts.sort.options.missingDesc") as string },
+      { value: "missingAsc", label: t("dishCosts.sort.options.missingAsc") as string },
+      { value: "ingredientsDesc", label: t("dishCosts.sort.options.ingredientsDesc") as string },
+      { value: "ingredientsAsc", label: t("dishCosts.sort.options.ingredientsAsc") as string },
+    ],
+    [t],
+  );
+
+  const sortedDishCosts = useMemo(() => {
+    const list = filteredDishes.slice();
+    list.sort((left, right) => {
+      const leftDish = dishMap.get(left.dishId);
+      const rightDish = dishMap.get(right.dishId);
+      const leftName = leftDish?.name ?? "";
+      const rightName = rightDish?.name ?? "";
+      const leftCalories = leftDish?.calories ?? 0;
+      const rightCalories = rightDish?.calories ?? 0;
+      const leftIngredients = leftDish?.ingredients.length ?? 0;
+      const rightIngredients = rightDish?.ingredients.length ?? 0;
+
+      switch (sortMode) {
+        case "nameAsc":
+          return collator.compare(leftName, rightName);
+        case "nameDesc":
+          return collator.compare(rightName, leftName);
+        case "costAsc":
+          return left.totalCost - right.totalCost;
+        case "caloriesDesc":
+          return rightCalories - leftCalories;
+        case "caloriesAsc":
+          return leftCalories - rightCalories;
+        case "missingDesc":
+          return right.missingIngredients.length - left.missingIngredients.length;
+        case "missingAsc":
+          return left.missingIngredients.length - right.missingIngredients.length;
+        case "ingredientsDesc":
+          return rightIngredients - leftIngredients;
+        case "ingredientsAsc":
+          return leftIngredients - rightIngredients;
+        case "costDesc":
+        default:
+          return right.totalCost - left.totalCost;
+      }
+    });
+    return list;
+  }, [filteredDishes, sortMode, dishMap, collator]);
 
   const totalFilteredCost = useMemo(
     () => filteredDishes.reduce((sum, dish) => sum + dish.totalCost, 0),
@@ -249,14 +309,30 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
       </section>
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">{t("dishCosts.table.heading")}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-900">{t("dishCosts.table.heading")}</h2>
+          <label className="text-xs text-gray-500">
+            {t("dishCosts.sort.label")}
+            <select
+              className="mt-1 block w-full rounded-xl border px-3 py-2 text-sm text-gray-700"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value)}
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {filteredDishes.length === 0 ? (
           <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
             {t("dishCosts.table.empty")}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredDishes.map((summary) => {
+            {sortedDishCosts.map((summary) => {
               const dish = dishMap.get(summary.dishId);
               if (!dish) return null;
               return (
@@ -307,6 +383,48 @@ interface DishCardProps {
 }
 
 function DishCard({ summary, dish, currencyFormatter, ingredientOptions, language, headers }: DishCardProps) {
+  const collator = useMemo(
+    () => new Intl.Collator(language, { sensitivity: "base" }),
+    [language],
+  );
+  const optionMap = useMemo(() => {
+    const map = new Map<string, IngredientOption>();
+    ingredientOptions.forEach((option) => map.set(option.name, option));
+    return map;
+  }, [ingredientOptions]);
+  const ingredientLabel = useCallback(
+    (name: string, unit: string) => {
+      const option = optionMap.get(name) ?? {
+        key: "",
+        name,
+        unit,
+        translations: {},
+      };
+      return getIngredientOptionLabel(option, language);
+    },
+    [optionMap, language],
+  );
+  const sortedIngredients = useMemo(
+    () =>
+      [...summary.ingredients].sort((left, right) =>
+        collator.compare(
+          ingredientLabel(left.ingredient, left.unit),
+          ingredientLabel(right.ingredient, right.unit),
+        ),
+      ),
+    [summary.ingredients, collator, ingredientLabel],
+  );
+  const sortedMissing = useMemo(
+    () =>
+      [...summary.missingIngredients].sort((left, right) =>
+        collator.compare(
+          ingredientLabel(left.ingredient, left.unit),
+          ingredientLabel(right.ingredient, right.unit),
+        ),
+      ),
+    [summary.missingIngredients, collator, ingredientLabel],
+  );
+
   return (
     <div className="rounded-2xl border bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -333,18 +451,10 @@ function DishCard({ summary, dish, currencyFormatter, ingredientOptions, languag
           </tr>
         </thead>
         <tbody>
-          {summary.ingredients.map((item) => (
+          {sortedIngredients.map((item) => (
             <tr key={item.ingredient} className="border-b last:border-none">
               <td className="py-2 pr-4">
-                {getIngredientOptionLabel(
-                  ingredientOptions.find((option) => option.name === item.ingredient) ?? {
-                    key: "",
-                    name: item.ingredient,
-                    unit: item.unit,
-                    translations: {},
-                  },
-                  language,
-                )}
+                {ingredientLabel(item.ingredient, item.unit)}
               </td>
               <td className="py-2 pr-4 text-gray-600">
                 {item.amount} {item.unit}
@@ -358,7 +468,7 @@ function DishCard({ summary, dish, currencyFormatter, ingredientOptions, languag
       {summary.missingIngredients.length > 0 && (
         <div className="mt-3 text-xs text-amber-700">
           Missing price data for:{" "}
-          {summary.missingIngredients.map((item) => `${item.ingredient} (${item.unit})`).join(", ")}
+          {sortedMissing.map((item) => `${item.ingredient} (${item.unit})`).join(", ")}
         </div>
       )}
     </div>

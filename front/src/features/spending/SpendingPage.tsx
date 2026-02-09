@@ -37,12 +37,19 @@ interface FiltersState {
 export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh }: SpendingPageProps) {
   const { t, language } = useTranslation();
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
+  const collator = useMemo(
+    () => new Intl.Collator(locale, { sensitivity: "base" }),
+    [locale],
+  );
 
   const [filters, setFilters] = useState<FiltersState>({
     start: "",
     end: "",
     ingredientKey: "",
   });
+  const [historySort, setHistorySort] = useState("dateDesc");
+  const [topSort, setTopSort] = useState("totalDesc");
+  const [caloriesSort, setCaloriesSort] = useState("caloriesDesc");
   const [reloading, setReloading] = useState(false);
   const [analytics, setAnalytics] = useState<SpendingAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -74,6 +81,17 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
     ingredients.forEach((item) => map.set(item.key, item));
     return map;
   }, [ingredients]);
+
+  const sortedIngredients = useMemo(
+    () =>
+      [...ingredients].sort((left, right) =>
+        collator.compare(
+          getIngredientOptionLabel(left, language),
+          getIngredientOptionLabel(right, language),
+        ),
+      ),
+    [ingredients, collator, language],
+  );
 
   const hasRequestedInitialRefresh = useRef(false);
   useEffect(() => {
@@ -191,6 +209,173 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
       ? filteredPurchases
       : filteredPurchases.filter((purchase) => purchase.ingredientKey === filters.ingredientKey);
 
+  const historySortOptions = useMemo(
+    () => [
+      { value: "dateDesc", label: t("spending.history.sort.options.dateDesc") as string },
+      { value: "dateAsc", label: t("spending.history.sort.options.dateAsc") as string },
+      { value: "priceDesc", label: t("spending.history.sort.options.priceDesc") as string },
+      { value: "priceAsc", label: t("spending.history.sort.options.priceAsc") as string },
+      { value: "unitPriceDesc", label: t("spending.history.sort.options.unitPriceDesc") as string },
+      { value: "unitPriceAsc", label: t("spending.history.sort.options.unitPriceAsc") as string },
+      { value: "ingredientAsc", label: t("spending.history.sort.options.ingredientAsc") as string },
+      { value: "ingredientDesc", label: t("spending.history.sort.options.ingredientDesc") as string },
+      { value: "amountDesc", label: t("spending.history.sort.options.amountDesc") as string },
+      { value: "amountAsc", label: t("spending.history.sort.options.amountAsc") as string },
+    ],
+    [t],
+  );
+
+  const topSortOptions = useMemo(
+    () => [
+      { value: "totalDesc", label: t("spending.top.sort.options.totalDesc") as string },
+      { value: "totalAsc", label: t("spending.top.sort.options.totalAsc") as string },
+      { value: "shareDesc", label: t("spending.top.sort.options.shareDesc") as string },
+      { value: "shareAsc", label: t("spending.top.sort.options.shareAsc") as string },
+      { value: "countDesc", label: t("spending.top.sort.options.countDesc") as string },
+      { value: "countAsc", label: t("spending.top.sort.options.countAsc") as string },
+      { value: "avgUnitPriceDesc", label: t("spending.top.sort.options.avgUnitPriceDesc") as string },
+      { value: "avgUnitPriceAsc", label: t("spending.top.sort.options.avgUnitPriceAsc") as string },
+      { value: "ingredientAsc", label: t("spending.top.sort.options.ingredientAsc") as string },
+      { value: "ingredientDesc", label: t("spending.top.sort.options.ingredientDesc") as string },
+    ],
+    [t],
+  );
+
+  const caloriesSortOptions = useMemo(
+    () => [
+      { value: "caloriesDesc", label: t("spending.caloriesTop.sort.options.caloriesDesc") as string },
+      { value: "caloriesAsc", label: t("spending.caloriesTop.sort.options.caloriesAsc") as string },
+      { value: "shareDesc", label: t("spending.caloriesTop.sort.options.shareDesc") as string },
+      { value: "shareAsc", label: t("spending.caloriesTop.sort.options.shareAsc") as string },
+      { value: "countDesc", label: t("spending.caloriesTop.sort.options.countDesc") as string },
+      { value: "countAsc", label: t("spending.caloriesTop.sort.options.countAsc") as string },
+      { value: "quantityDesc", label: t("spending.caloriesTop.sort.options.quantityDesc") as string },
+      { value: "quantityAsc", label: t("spending.caloriesTop.sort.options.quantityAsc") as string },
+      { value: "ingredientAsc", label: t("spending.caloriesTop.sort.options.ingredientAsc") as string },
+      { value: "ingredientDesc", label: t("spending.caloriesTop.sort.options.ingredientDesc") as string },
+    ],
+    [t],
+  );
+
+  const ingredientLabelForKey = useCallback(
+    (key: string) => {
+      const ingredient = ingredientMap.get(key);
+      return ingredient ? getIngredientOptionLabel(ingredient, language) : key;
+    },
+    [ingredientMap, language],
+  );
+
+  const sortedTopSpenders = useMemo(() => {
+    const list = topSpenders.slice();
+    list.sort((left, right) => {
+      const leftName = ingredientLabelForKey(left.ingredientKey);
+      const rightName = ingredientLabelForKey(right.ingredientKey);
+      switch (topSort) {
+        case "totalAsc":
+          return left.total - right.total;
+        case "shareDesc":
+          return right.share - left.share;
+        case "shareAsc":
+          return left.share - right.share;
+        case "countDesc":
+          return right.count - left.count;
+        case "countAsc":
+          return left.count - right.count;
+        case "avgUnitPriceDesc":
+          return (right.averageUnitPrice ?? 0) - (left.averageUnitPrice ?? 0);
+        case "avgUnitPriceAsc":
+          return (left.averageUnitPrice ?? 0) - (right.averageUnitPrice ?? 0);
+        case "ingredientDesc":
+          return collator.compare(rightName, leftName);
+        case "ingredientAsc":
+          return collator.compare(leftName, rightName);
+        case "totalDesc":
+        default:
+          return right.total - left.total;
+      }
+    });
+    return list;
+  }, [topSpenders, topSort, ingredientLabelForKey, collator]);
+
+  const sortedTopCalories = useMemo(() => {
+    const list = topCalorieItems.slice();
+    list.sort((left, right) => {
+      const leftName = ingredientLabelForKey(left.ingredientKey);
+      const rightName = ingredientLabelForKey(right.ingredientKey);
+      const leftShare = (nutritionStats?.totalCalories ?? 0) > 0
+        ? left.totalCalories / (nutritionStats?.totalCalories ?? 1)
+        : 0;
+      const rightShare = (nutritionStats?.totalCalories ?? 0) > 0
+        ? right.totalCalories / (nutritionStats?.totalCalories ?? 1)
+        : 0;
+      switch (caloriesSort) {
+        case "caloriesAsc":
+          return left.totalCalories - right.totalCalories;
+        case "shareDesc":
+          return rightShare - leftShare;
+        case "shareAsc":
+          return leftShare - rightShare;
+        case "countDesc":
+          return right.count - left.count;
+        case "countAsc":
+          return left.count - right.count;
+        case "quantityDesc":
+          return (right.normalizedAmount ?? 0) - (left.normalizedAmount ?? 0);
+        case "quantityAsc":
+          return (left.normalizedAmount ?? 0) - (right.normalizedAmount ?? 0);
+        case "ingredientDesc":
+          return collator.compare(rightName, leftName);
+        case "ingredientAsc":
+          return collator.compare(leftName, rightName);
+        case "caloriesDesc":
+        default:
+          return right.totalCalories - left.totalCalories;
+      }
+    });
+    return list;
+  }, [topCalorieItems, caloriesSort, ingredientLabelForKey, collator, nutritionStats]);
+
+  const sortedHistory = useMemo(() => {
+    const rows = historyEntries.map((purchase) => {
+      const ingredientName = getLocalizedIngredientName(
+        ingredients,
+        language,
+        purchase.ingredientName,
+        purchase.unit,
+      );
+      const unitPriceInfo = computeUnitPrice(purchase);
+      const unitPriceValue = unitPriceInfo ? unitPriceInfo.pricePerUnit : 0;
+      const purchaseDate = new Date(purchase.purchasedAt).getTime();
+      return { purchase, ingredientName, unitPriceValue, purchaseDate };
+    });
+    rows.sort((left, right) => {
+      switch (historySort) {
+        case "dateAsc":
+          return left.purchaseDate - right.purchaseDate;
+        case "priceDesc":
+          return right.purchase.price - left.purchase.price;
+        case "priceAsc":
+          return left.purchase.price - right.purchase.price;
+        case "unitPriceDesc":
+          return right.unitPriceValue - left.unitPriceValue;
+        case "unitPriceAsc":
+          return left.unitPriceValue - right.unitPriceValue;
+        case "ingredientDesc":
+          return collator.compare(right.ingredientName, left.ingredientName);
+        case "ingredientAsc":
+          return collator.compare(left.ingredientName, right.ingredientName);
+        case "amountDesc":
+          return right.purchase.amount - left.purchase.amount;
+        case "amountAsc":
+          return left.purchase.amount - right.purchase.amount;
+        case "dateDesc":
+        default:
+          return right.purchaseDate - left.purchaseDate;
+      }
+    });
+    return rows;
+  }, [historyEntries, ingredients, language, historySort, collator]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -245,7 +430,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
               onChange={(event) => setFilters((prev) => ({ ...prev, ingredientKey: event.target.value }))}
             >
               <option value="">{t("spending.filters.allProducts")}</option>
-              {ingredients.map((ingredient) => (
+              {sortedIngredients.map((ingredient) => (
                 <option key={ingredient.key} value={ingredient.key}>
                   {getIngredientOptionLabel(ingredient, language)}
                 </option>
@@ -355,9 +540,25 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
       </section>
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("spending.top.heading")}</h2>
-          <p className="text-sm text-gray-500">{t("spending.top.subtitle")}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{t("spending.top.heading")}</h2>
+            <p className="text-sm text-gray-500">{t("spending.top.subtitle")}</p>
+          </div>
+          <label className="text-xs text-gray-500">
+            {t("spending.top.sort.label")}
+            <select
+              className="mt-1 block w-full rounded-xl border px-3 py-2 text-sm text-gray-700"
+              value={topSort}
+              onChange={(event) => setTopSort(event.target.value)}
+            >
+              {topSortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {topSpenders.length === 0 ? (
           <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
@@ -376,7 +577,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
                 </tr>
               </thead>
               <tbody>
-                {topSpenders.map((entry) => {
+                {sortedTopSpenders.map((entry) => {
                   const ingredient = ingredientMap.get(entry.ingredientKey);
                   const ingredientName = ingredient
                     ? getIngredientOptionLabel(ingredient, language)
@@ -404,9 +605,25 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
       </section>
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("spending.caloriesTop.heading")}</h2>
-          <p className="text-sm text-gray-500">{t("spending.caloriesTop.subtitle")}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{t("spending.caloriesTop.heading")}</h2>
+            <p className="text-sm text-gray-500">{t("spending.caloriesTop.subtitle")}</p>
+          </div>
+          <label className="text-xs text-gray-500">
+            {t("spending.caloriesTop.sort.label")}
+            <select
+              className="mt-1 block w-full rounded-xl border px-3 py-2 text-sm text-gray-700"
+              value={caloriesSort}
+              onChange={(event) => setCaloriesSort(event.target.value)}
+            >
+              {caloriesSortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {topCalorieItems.length === 0 ? (
           <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
@@ -425,7 +642,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
                 </tr>
               </thead>
               <tbody>
-                {topCalorieItems.map((entry) => {
+                {sortedTopCalories.map((entry) => {
                   const ingredient = ingredientMap.get(entry.ingredientKey);
                   const ingredientName = ingredient
                     ? getIngredientOptionLabel(ingredient, language)
@@ -458,9 +675,25 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
       </section>
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-gray-900">{t("spending.history.heading")}</h2>
-          <p className="text-sm text-gray-500">{selectedIngredientName}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-gray-900">{t("spending.history.heading")}</h2>
+            <p className="text-sm text-gray-500">{selectedIngredientName}</p>
+          </div>
+          <label className="text-xs text-gray-500">
+            {t("spending.history.sort.label")}
+            <select
+              className="mt-1 block w-full rounded-xl border px-3 py-2 text-sm text-gray-700"
+              value={historySort}
+              onChange={(event) => setHistorySort(event.target.value)}
+            >
+              {historySortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {historyEntries.length === 0 ? (
           <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
@@ -479,17 +712,8 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
                 </tr>
               </thead>
               <tbody>
-                {historyEntries
-                  .slice()
-                  .sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt))
-                  .map((purchase) => {
-                    const ingredientName = getLocalizedIngredientName(
-                      ingredients,
-                      language,
-                      purchase.ingredientName,
-                      purchase.unit,
-                    );
-                    const unitPriceInfo = computeUnitPrice(purchase);
+                {sortedHistory.map(({ purchase, ingredientName }) => {
+                  const unitPriceInfo = computeUnitPrice(purchase);
                     return (
                       <tr key={purchase.id} className="border-b last:border-none">
                         <td className="py-2 pr-4 text-gray-600">

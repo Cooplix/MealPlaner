@@ -49,8 +49,28 @@ export function DishesPage({
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
+  const [sortMode, setSortMode] = useState("nameAsc");
   const { t, language } = useTranslation();
-  const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
+  const collator = useMemo(
+    () => new Intl.Collator(language, { sensitivity: "base" }),
+    [language],
+  );
+  const formatUnit = useCallback(
+    (value: string): string => {
+      const label = t(`units.${value}`);
+      return label.startsWith("units.") ? value : label;
+    },
+    [t],
+  );
+  const rawUnitOptions = useMemo(
+    () => (units.length ? units : Array.from(MEASUREMENT_UNITS)),
+    [units],
+  );
+  const unitOptions = useMemo(
+    () =>
+      [...rawUnitOptions].sort((a, b) => collator.compare(formatUnit(a), formatUnit(b))),
+    [rawUnitOptions, collator, formatUnit],
+  );
 
   const optionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
@@ -78,10 +98,10 @@ export function DishesPage({
     },
     [getOptionForIngredient, language],
   );
-  const formatUnit = (value: string): string => {
-    const label = t(`units.${value}`);
-    return label.startsWith("units.") ? value : label;
-  };
+  const ingredientSortLabel = useCallback(
+    (ingredient: Ingredient) => ingredientDisplayName(ingredient) ?? "",
+    [ingredientDisplayName],
+  );
 
   const usedDishIds = useMemo(
     () =>
@@ -89,7 +109,7 @@ export function DishesPage({
     [plans],
   );
 
-  const filtered = useMemo(() => {
+  const filteredDishes = useMemo(() => {
     const q = query.trim().toLowerCase();
     return dishes.filter((dish) => {
       if (mealFilter !== "all" && dish.meal !== mealFilter) {
@@ -110,6 +130,58 @@ export function DishesPage({
       });
     });
   }, [query, dishes, mealFilter, getOptionForIngredient]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "nameAsc", label: t("dishes.sort.options.nameAsc") as string },
+      { value: "nameDesc", label: t("dishes.sort.options.nameDesc") as string },
+      { value: "mealAsc", label: t("dishes.sort.options.mealAsc") as string },
+      { value: "caloriesDesc", label: t("dishes.sort.options.caloriesDesc") as string },
+      { value: "caloriesAsc", label: t("dishes.sort.options.caloriesAsc") as string },
+      { value: "ingredientsDesc", label: t("dishes.sort.options.ingredientsDesc") as string },
+      { value: "ingredientsAsc", label: t("dishes.sort.options.ingredientsAsc") as string },
+    ],
+    [t],
+  );
+
+  const sortedDishes = useMemo(() => {
+    const list = filteredDishes.slice();
+    const mealIndex = (meal: string) => {
+      const index = MEAL_ORDER.indexOf(meal as MealSlot);
+      return index >= 0 ? index : MEAL_ORDER.length;
+    };
+    list.sort((left, right) => {
+      switch (sortMode) {
+        case "nameDesc":
+          return collator.compare(right.name ?? "", left.name ?? "");
+        case "mealAsc": {
+          const diff = mealIndex(left.meal) - mealIndex(right.meal);
+          if (diff !== 0) return diff;
+          return collator.compare(left.name ?? "", right.name ?? "");
+        }
+        case "caloriesDesc":
+          return (right.calories ?? 0) - (left.calories ?? 0);
+        case "caloriesAsc":
+          return (left.calories ?? 0) - (right.calories ?? 0);
+        case "ingredientsDesc":
+          return right.ingredients.length - left.ingredients.length;
+        case "ingredientsAsc":
+          return left.ingredients.length - right.ingredients.length;
+        case "nameAsc":
+        default:
+          return collator.compare(left.name ?? "", right.name ?? "");
+      }
+    });
+    return list;
+  }, [filteredDishes, sortMode, collator]);
+
+  const sortDishIngredients = useCallback(
+    (ingredients: Ingredient[]) =>
+      [...ingredients].sort((left, right) =>
+        collator.compare(ingredientSortLabel(left), ingredientSortLabel(right)),
+      ),
+    [collator, ingredientSortLabel],
+  );
 
   async function saveDish(dish: Dish) {
     setBusyId(dish.id);
@@ -180,6 +252,20 @@ export function DishesPage({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <span>{t("dishes.sort.label")}:</span>
+          <select
+            className="rounded-xl border px-3 py-2"
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value)}
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {editing && (
@@ -195,11 +281,12 @@ export function DishesPage({
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((dish) => {
+        {sortedDishes.map((dish) => {
           const notes = dish.notes?.trim() ?? "";
           const hasLongNotes = notes.length > NOTES_PREVIEW_LIMIT;
           const notesPreview = hasLongNotes ? `${notes.slice(0, NOTES_PREVIEW_LIMIT).trim()}…` : notes;
-          const visibleIngredients = dish.ingredients.slice(0, INGREDIENT_PREVIEW_LIMIT);
+          const sortedIngredients = sortDishIngredients(dish.ingredients);
+          const visibleIngredients = sortedIngredients.slice(0, INGREDIENT_PREVIEW_LIMIT);
           const remainingIngredients = Math.max(0, dish.ingredients.length - visibleIngredients.length);
           const showMore = hasLongNotes || remainingIngredients > 0;
 
@@ -276,7 +363,7 @@ export function DishesPage({
           </div>
           );
         })}
-        {!filtered.length && <div className="text-gray-500">{t("dishes.empty")}</div>}
+        {!sortedDishes.length && <div className="text-gray-500">{t("dishes.empty")}</div>}
       </div>
 
       {detailDish && (
@@ -311,7 +398,7 @@ export function DishesPage({
                   {t("dishes.editor.ingredientsTitle")}
                 </div>
                 <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-gray-700">
-                  {detailDish.ingredients.map((ingredient) => (
+                  {sortDishIngredients(detailDish.ingredients).map((ingredient) => (
                     <li key={ingredient.id}>
                       {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
                     </li>
@@ -371,6 +458,10 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
   }));
   const [existingChoice, setExistingChoice] = useState<string>("");
   const { t, language } = useTranslation();
+  const collator = useMemo(
+    () => new Intl.Collator(language, { sensitivity: "base" }),
+    [language],
+  );
   const optionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
     ingredientOptions.forEach((option) => {
@@ -392,6 +483,13 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
     const label = t(`units.${value}`);
     return label.startsWith("units.") ? value : label;
   };
+  const optionLabel = useCallback(
+    (option: IngredientOption) => {
+      const localized = option.translations[language];
+      return localized && localized.trim().length > 0 ? localized : option.name;
+    },
+    [language],
+  );
 
   const availableExisting = useMemo(() => {
     const usedKeys = new Set(
@@ -399,8 +497,10 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
         .map((ingredient) => resolveIngredientKey(ingredient))
         .filter((key): key is string => Boolean(key)),
     );
-    return ingredientOptions.filter((option) => !usedKeys.has(option.key));
-  }, [ingredientOptions, state.ingredients]);
+    return ingredientOptions
+      .filter((option) => !usedKeys.has(option.key))
+      .sort((left, right) => collator.compare(optionLabel(left), optionLabel(right)));
+  }, [ingredientOptions, state.ingredients, collator, optionLabel]);
 
   function addIngredient() {
     setState((prev) => ({

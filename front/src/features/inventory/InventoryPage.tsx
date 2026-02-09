@@ -85,8 +85,6 @@ type InventoryPageProps = {
 
 export function InventoryPage({ ingredientOptions, categories, locations, units }: InventoryPageProps) {
   const { t, language } = useTranslation();
-  const defaultUnit = units[0] ?? "";
-  const defaultLocation = locations[0] ?? "";
   const [activeTab, setActiveTab] = useState<InventoryTab>("products");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -135,6 +133,8 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     location: "all",
     status: "all",
   });
+  const [sortMode, setSortMode] = useState("nameAsc");
+  const [petSortMode, setPetSortMode] = useState("nameAsc");
   const [visibleProductsCount, setVisibleProductsCount] = useState(DEFAULT_VISIBLE_PRODUCTS);
   const hints = useMemo(() => {
     return [
@@ -148,6 +148,20 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     () => new Intl.Collator(locale, { sensitivity: "base" }),
     [locale],
   );
+  const sortedUnits = useMemo(
+    () => [...units].sort((a, b) => collator.compare(a, b)),
+    [units, collator],
+  );
+  const sortedLocations = useMemo(
+    () => [...locations].sort((a, b) => collator.compare(a, b)),
+    [locations, collator],
+  );
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => collator.compare(a, b)),
+    [categories, collator],
+  );
+  const defaultUnit = sortedUnits[0] ?? "";
+  const defaultLocation = sortedLocations[0] ?? "";
   const quantityFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
     [locale],
@@ -235,37 +249,45 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     };
   }, [activeTab]);
 
+  const formatUnit = useCallback(
+    (value: string): string => {
+      const label = t(`units.${value}`);
+      return label.startsWith("units.") ? value : label;
+    },
+    [t],
+  );
+
   const categoryOptions = useMemo(() => {
-    const unique = new Set<string>(categories);
+    const unique = new Set<string>(sortedCategories);
     items.forEach((item) => {
       if (item.category) unique.add(item.category);
     });
-    return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [categories, items]);
+    return Array.from(unique).sort((a, b) => collator.compare(formatUnit(a), formatUnit(b)));
+  }, [sortedCategories, items, collator]);
 
   const locationOptions = useMemo(() => {
-    const unique = new Set<string>(locations);
+    const unique = new Set<string>(sortedLocations);
     items.forEach((item) => {
       if (item.location) unique.add(item.location);
     });
-    return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [locations, items]);
+    return Array.from(unique).sort((a, b) => collator.compare(formatUnit(a), formatUnit(b)));
+  }, [sortedLocations, items, collator]);
 
   const unitOptions = useMemo(() => {
-    const unique = new Set<string>(units);
+    const unique = new Set<string>(sortedUnits);
     items.forEach((item) => {
       if (item.unit) unique.add(item.unit);
     });
-    return Array.from(unique);
-  }, [units, items]);
+    return Array.from(unique).sort((a, b) => collator.compare(a, b));
+  }, [sortedUnits, items, collator]);
 
   const petUnitOptions = useMemo(() => {
-    const unique = new Set<string>(units);
+    const unique = new Set<string>(sortedUnits);
     petItems.forEach((item) => {
       if (item.weightUnit) unique.add(item.weightUnit);
     });
-    return Array.from(unique);
-  }, [units, petItems]);
+    return Array.from(unique).sort((a, b) => collator.compare(a, b));
+  }, [sortedUnits, petItems, collator]);
 
   useEffect(() => {
     if (!formOpen || formMode !== "create") return;
@@ -276,45 +298,149 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     }));
   }, [formOpen, formMode, defaultUnit, defaultLocation]);
 
-  const formCategoryOptions = formMode === "edit" ? categoryOptions : categories;
-  const formLocationOptions = formMode === "edit" ? locationOptions : locations;
-  const formUnitOptions = formMode === "edit" ? unitOptions : units;
+  const formCategoryOptions = formMode === "edit" ? categoryOptions : sortedCategories;
+  const formLocationOptions = formMode === "edit" ? locationOptions : sortedLocations;
+  const formUnitOptions = formMode === "edit" ? unitOptions : sortedUnits;
 
   const filteredItems = useMemo(() => {
-    return items
-      .filter((item) => {
-        const search = filters.search.trim().toLowerCase();
-        if (search) {
-          const hay = `${item.name} ${item.baseName ?? ""}`.toLowerCase();
-          if (!hay.includes(search)) return false;
-        }
-        if (filters.category !== "all" && item.category !== filters.category) return false;
-        if (filters.location !== "all" && item.location !== filters.location) return false;
+    const list = items.filter((item) => {
+      const search = filters.search.trim().toLowerCase();
+      if (search) {
+        const hay = `${item.name} ${item.baseName ?? ""}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      if (filters.category !== "all" && item.category !== filters.category) return false;
+      if (filters.location !== "all" && item.location !== filters.location) return false;
 
-        if (filters.status !== "all") {
-          const expiry = getExpiryStatus(item.expiresAt);
-          const restock = getRestockStatus(item.quantity, item.minQty);
-          if (filters.status === "expired" && expiry !== "EXPIRED") return false;
-          if (filters.status === "soon" && !(expiry === "<=14d" || expiry === "<=30d"))
-            return false;
-          if (filters.status === "restock" && restock !== "RESTOCK") return false;
-        }
-        return true;
-      })
-      .sort((left, right) => {
-        const leftCategory = left.category?.trim() ?? "";
-        const rightCategory = right.category?.trim() ?? "";
-        const leftCategoryMissing = leftCategory.length === 0;
-        const rightCategoryMissing = rightCategory.length === 0;
-        if (leftCategoryMissing !== rightCategoryMissing) {
-          return leftCategoryMissing ? 1 : -1;
-        }
+      if (filters.status !== "all") {
+        const expiry = getExpiryStatus(item.expiresAt);
+        const restock = getRestockStatus(item.quantity, item.minQty);
+        if (filters.status === "expired" && expiry !== "EXPIRED") return false;
+        if (filters.status === "soon" && !(expiry === "<=14d" || expiry === "<=30d"))
+          return false;
+        if (filters.status === "restock" && restock !== "RESTOCK") return false;
+      }
+      return true;
+    });
 
-        const byCategory = collator.compare(leftCategory, rightCategory);
-        if (byCategory !== 0) return byCategory;
-        return collator.compare(left.name ?? "", right.name ?? "");
-      });
-  }, [items, filters, collator]);
+    const compareExpiry = (left: InventoryItem, right: InventoryItem, direction: number) => {
+      const leftDate = left.expiresAt ? new Date(left.expiresAt).getTime() : null;
+      const rightDate = right.expiresAt ? new Date(right.expiresAt).getTime() : null;
+      if (leftDate === null && rightDate === null) return 0;
+      if (leftDate === null) return 1;
+      if (rightDate === null) return -1;
+      return (leftDate - rightDate) * direction;
+    };
+
+    list.sort((left, right) => {
+      const leftName = left.name ?? "";
+      const rightName = right.name ?? "";
+      const leftCategory = left.category?.trim() ?? "";
+      const rightCategory = right.category?.trim() ?? "";
+      const leftToBuy = getToBuy(left.quantity, left.minQty, left.maxQty);
+      const rightToBuy = getToBuy(right.quantity, right.minQty, right.maxQty);
+
+      switch (sortMode) {
+        case "nameDesc":
+          return collator.compare(rightName, leftName);
+        case "categoryAsc": {
+          const byCategory = collator.compare(leftCategory, rightCategory);
+          if (byCategory !== 0) return byCategory;
+          return collator.compare(leftName, rightName);
+        }
+        case "categoryDesc": {
+          const byCategory = collator.compare(rightCategory, leftCategory);
+          if (byCategory !== 0) return byCategory;
+          return collator.compare(rightName, leftName);
+        }
+        case "quantityDesc":
+          return right.quantity - left.quantity;
+        case "quantityAsc":
+          return left.quantity - right.quantity;
+        case "expiryAsc":
+          return compareExpiry(left, right, 1);
+        case "expiryDesc":
+          return compareExpiry(left, right, -1);
+        case "toBuyDesc":
+          return rightToBuy - leftToBuy;
+        case "toBuyAsc":
+          return leftToBuy - rightToBuy;
+        case "nameAsc":
+        default:
+          return collator.compare(leftName, rightName);
+      }
+    });
+    return list;
+  }, [items, filters, sortMode, collator]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "nameAsc", label: t("inventory.sort.options.nameAsc") as string },
+      { value: "nameDesc", label: t("inventory.sort.options.nameDesc") as string },
+      { value: "categoryAsc", label: t("inventory.sort.options.categoryAsc") as string },
+      { value: "categoryDesc", label: t("inventory.sort.options.categoryDesc") as string },
+      { value: "quantityDesc", label: t("inventory.sort.options.quantityDesc") as string },
+      { value: "quantityAsc", label: t("inventory.sort.options.quantityAsc") as string },
+      { value: "expiryAsc", label: t("inventory.sort.options.expiryAsc") as string },
+      { value: "expiryDesc", label: t("inventory.sort.options.expiryDesc") as string },
+      { value: "toBuyDesc", label: t("inventory.sort.options.toBuyDesc") as string },
+      { value: "toBuyAsc", label: t("inventory.sort.options.toBuyAsc") as string },
+    ],
+    [t],
+  );
+
+  const petSortOptions = useMemo(
+    () => [
+      { value: "nameAsc", label: t("inventory.pet.sort.options.nameAsc") as string },
+      { value: "nameDesc", label: t("inventory.pet.sort.options.nameDesc") as string },
+      { value: "quantityDesc", label: t("inventory.pet.sort.options.quantityDesc") as string },
+      { value: "quantityAsc", label: t("inventory.pet.sort.options.quantityAsc") as string },
+      { value: "expiryAsc", label: t("inventory.pet.sort.options.expiryAsc") as string },
+      { value: "expiryDesc", label: t("inventory.pet.sort.options.expiryDesc") as string },
+      { value: "toBuyDesc", label: t("inventory.pet.sort.options.toBuyDesc") as string },
+      { value: "toBuyAsc", label: t("inventory.pet.sort.options.toBuyAsc") as string },
+    ],
+    [t],
+  );
+
+  const sortedPetItems = useMemo(() => {
+    const list = petItems.slice();
+    const compareExpiry = (left: PetFoodItem, right: PetFoodItem, direction: number) => {
+      const leftDate = left.expiresAt ? new Date(left.expiresAt).getTime() : null;
+      const rightDate = right.expiresAt ? new Date(right.expiresAt).getTime() : null;
+      if (leftDate === null && rightDate === null) return 0;
+      if (leftDate === null) return 1;
+      if (rightDate === null) return -1;
+      return (leftDate - rightDate) * direction;
+    };
+    list.sort((left, right) => {
+      const leftTitle = `${left.manufacturer} ${left.productName}`.trim();
+      const rightTitle = `${right.manufacturer} ${right.productName}`.trim();
+      const leftToBuy = getToBuy(left.quantity, left.minQty, left.maxQty);
+      const rightToBuy = getToBuy(right.quantity, right.minQty, right.maxQty);
+
+      switch (petSortMode) {
+        case "nameDesc":
+          return collator.compare(rightTitle, leftTitle);
+        case "quantityDesc":
+          return right.quantity - left.quantity;
+        case "quantityAsc":
+          return left.quantity - right.quantity;
+        case "expiryAsc":
+          return compareExpiry(left, right, 1);
+        case "expiryDesc":
+          return compareExpiry(left, right, -1);
+        case "toBuyDesc":
+          return rightToBuy - leftToBuy;
+        case "toBuyAsc":
+          return leftToBuy - rightToBuy;
+        case "nameAsc":
+        default:
+          return collator.compare(leftTitle, rightTitle);
+      }
+    });
+    return list;
+  }, [petItems, petSortMode, collator]);
 
   const visibleFilteredItems = useMemo(
     () => filteredItems.slice(0, visibleProductsCount),
@@ -323,18 +449,13 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
 
   useEffect(() => {
     setVisibleProductsCount(DEFAULT_VISIBLE_PRODUCTS);
-  }, [activeTab, filters.search, filters.category, filters.location, filters.status]);
+  }, [activeTab, filters.search, filters.category, filters.location, filters.status, sortMode]);
 
   const ingredientOptionMap = useMemo(() => {
     const map = new Map<string, IngredientOption>();
     ingredientOptions.forEach((option) => map.set(normalizeKey(option.key), option));
     return map;
   }, [ingredientOptions]);
-
-  const formatUnit = (value: string): string => {
-    const label = t(`units.${value}`);
-    return label.startsWith("units.") ? value : label;
-  };
 
   const eventKindLabel = (event: InventoryEvent): string => {
     switch (event.kind) {
@@ -840,6 +961,20 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 <div className="text-xs text-gray-500">
                   {t("inventory.table.count", { count: filteredItems.length })}
                 </div>
+                <label className="text-xs text-gray-500">
+                  {t("inventory.sort.label")}
+                  <select
+                    className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700"
+                    value={sortMode}
+                    onChange={(event) => setSortMode(event.target.value)}
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
                   className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
@@ -961,6 +1096,20 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 <div className="text-xs text-gray-500">
                   {t("inventory.pet.table.count", { count: petItems.length })}
                 </div>
+                <label className="text-xs text-gray-500">
+                  {t("inventory.pet.sort.label")}
+                  <select
+                    className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700"
+                    value={petSortMode}
+                    onChange={(event) => setPetSortMode(event.target.value)}
+                  >
+                    {petSortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
                   className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
@@ -998,7 +1147,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {petItems.map((item) => {
+                      {sortedPetItems.map((item) => {
                         const expiry = getExpiryStatus(item.expiresAt);
                         const restock = getRestockStatus(item.quantity, item.minQty);
                         const toBuy = getToBuy(item.quantity, item.minQty, item.maxQty);

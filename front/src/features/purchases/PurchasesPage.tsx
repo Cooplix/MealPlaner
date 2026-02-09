@@ -66,6 +66,10 @@ export function PurchasesPage({
 }: PurchasesPageProps) {
   const { t, language } = useTranslation();
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
+  const collator = useMemo(
+    () => new Intl.Collator(locale, { sensitivity: "base" }),
+    [locale],
+  );
   const unitOptions = units.length ? units : Array.from(MEASUREMENT_UNITS);
   const locationOptions = locations.length ? locations : DEFAULT_LOCATIONS;
 
@@ -88,6 +92,7 @@ export function PurchasesPage({
     end: "",
     ingredientKey: "",
   });
+  const [sortMode, setSortMode] = useState("dateDesc");
 
   const [reloading, setReloading] = useState(false);
 
@@ -98,6 +103,35 @@ export function PurchasesPage({
   const quantityFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 3 }),
     [locale],
+  );
+
+  const formatUnit = useCallback(
+    (value: string): string => {
+      const label = t(`units.${value}`);
+      return label.startsWith("units.") ? value : label;
+    },
+    [t],
+  );
+
+  const sortedIngredients = useMemo(
+    () =>
+      [...ingredients].sort((left, right) =>
+        collator.compare(
+          getIngredientOptionLabel(left, language),
+          getIngredientOptionLabel(right, language),
+        ),
+      ),
+    [ingredients, collator, language],
+  );
+
+  const sortedUnitOptions = useMemo(
+    () => [...unitOptions].sort((a, b) => collator.compare(formatUnit(a), formatUnit(b))),
+    [unitOptions, collator, formatUnit],
+  );
+
+  const sortedLocationOptions = useMemo(
+    () => [...locationOptions].sort((a, b) => collator.compare(a, b)),
+    [locationOptions, collator],
   );
 
   const ingredientMap = useMemo(() => {
@@ -145,11 +179,6 @@ export function PurchasesPage({
     }
   }, [locationOptions, formState.location]);
 
-  const formatUnit = (value: string): string => {
-    const label = t(`units.${value}`);
-    return label.startsWith("units.") ? value : label;
-  };
-
   const filteredPurchases = useMemo(() => {
     return purchases.filter((purchase) => {
       if (filters.ingredientKey && purchase.ingredientKey !== filters.ingredientKey) {
@@ -177,6 +206,63 @@ export function PurchasesPage({
   );
 
   const totalLabel = currencyFormatter.format(totalSpent);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "dateDesc", label: t("purchases.sort.options.dateDesc") as string },
+      { value: "dateAsc", label: t("purchases.sort.options.dateAsc") as string },
+      { value: "priceDesc", label: t("purchases.sort.options.priceDesc") as string },
+      { value: "priceAsc", label: t("purchases.sort.options.priceAsc") as string },
+      { value: "unitPriceDesc", label: t("purchases.sort.options.unitPriceDesc") as string },
+      { value: "unitPriceAsc", label: t("purchases.sort.options.unitPriceAsc") as string },
+      { value: "ingredientAsc", label: t("purchases.sort.options.ingredientAsc") as string },
+      { value: "ingredientDesc", label: t("purchases.sort.options.ingredientDesc") as string },
+      { value: "amountDesc", label: t("purchases.sort.options.amountDesc") as string },
+      { value: "amountAsc", label: t("purchases.sort.options.amountAsc") as string },
+    ],
+    [t],
+  );
+
+  const sortedPurchases = useMemo(() => {
+    const rows = filteredPurchases.map((purchase) => {
+      const ingredientName = getLocalizedIngredientName(
+        ingredients,
+        language,
+        purchase.ingredientName,
+        purchase.unit,
+      );
+      const unitPriceInfo = computeUnitPrice(purchase);
+      const unitPriceValue = unitPriceInfo ? unitPriceInfo.pricePerUnit : 0;
+      const purchaseDate = new Date(purchase.purchasedAt).getTime();
+      return { purchase, ingredientName, unitPriceValue, purchaseDate };
+    });
+    rows.sort((left, right) => {
+      switch (sortMode) {
+        case "dateAsc":
+          return left.purchaseDate - right.purchaseDate;
+        case "priceDesc":
+          return right.purchase.price - left.purchase.price;
+        case "priceAsc":
+          return left.purchase.price - right.purchase.price;
+        case "unitPriceDesc":
+          return right.unitPriceValue - left.unitPriceValue;
+        case "unitPriceAsc":
+          return left.unitPriceValue - right.unitPriceValue;
+        case "ingredientDesc":
+          return collator.compare(right.ingredientName, left.ingredientName);
+        case "ingredientAsc":
+          return collator.compare(left.ingredientName, right.ingredientName);
+        case "amountDesc":
+          return right.purchase.amount - left.purchase.amount;
+        case "amountAsc":
+          return left.purchase.amount - right.purchase.amount;
+        case "dateDesc":
+        default:
+          return right.purchaseDate - left.purchaseDate;
+      }
+    });
+    return rows;
+  }, [filteredPurchases, ingredients, language, collator, sortMode]);
 
   const handleFormChange = (patch: Partial<FormState>) => {
     setFormState((prev) => ({ ...prev, ...patch }));
@@ -290,7 +376,7 @@ export function PurchasesPage({
                 });
               }}
             >
-              {ingredients.map((ingredient) => (
+              {sortedIngredients.map((ingredient) => (
                 <option key={ingredient.key} value={ingredient.key}>
                   {getIngredientOptionLabel(ingredient, language)}
                 </option>
@@ -319,7 +405,7 @@ export function PurchasesPage({
               value={formState.unit}
               onChange={(event) => handleFormChange({ unit: event.target.value })}
             >
-              {unitOptions.map((value) => (
+              {sortedUnitOptions.map((value) => (
                 <option key={value} value={value}>
                   {formatUnit(value)}
                 </option>
@@ -361,7 +447,7 @@ export function PurchasesPage({
               onChange={(event) => handleFormChange({ location: event.target.value })}
               disabled={!formState.applyToInventory}
             >
-              {locationOptions.map((value) => (
+              {sortedLocationOptions.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
@@ -443,9 +529,26 @@ export function PurchasesPage({
                 onChange={(event) => setFilters((prev) => ({ ...prev, ingredientKey: event.target.value }))}
               >
                 <option value="">{t("spending.filters.allProducts")}</option>
-                {ingredients.map((ingredient) => (
+                {sortedIngredients.map((ingredient) => (
                   <option key={ingredient.key} value={ingredient.key}>
                     {getIngredientOptionLabel(ingredient, language)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500" htmlFor="purchases-filter-sort">
+                {t("purchases.sort.label")}
+              </label>
+              <select
+                id="purchases-filter-sort"
+                className="mt-1 rounded-xl border px-3 py-2 text-sm"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value)}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -477,13 +580,7 @@ export function PurchasesPage({
                 </tr>
               </thead>
               <tbody>
-                {filteredPurchases.map((purchase) => {
-                  const ingredientName = getLocalizedIngredientName(
-                    ingredients,
-                    language,
-                    purchase.ingredientName,
-                    purchase.unit,
-                  );
+                {sortedPurchases.map(({ purchase, ingredientName }) => {
                   const unitPriceInfo = computeUnitPrice(purchase);
                   return (
                     <tr key={purchase.id} className="border-b last:border-none">

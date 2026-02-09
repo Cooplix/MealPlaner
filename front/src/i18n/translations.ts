@@ -60,6 +60,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         soon: "Expiring soon",
         restock: "Needs restock",
       },
+      sort: {
+        label: "Sort by",
+        options: {
+          nameAsc: "Name (A–Z)",
+          nameDesc: "Name (Z–A)",
+          categoryAsc: "Category (A–Z)",
+          categoryDesc: "Category (Z–A)",
+          quantityDesc: "Quantity (high → low)",
+          quantityAsc: "Quantity (low → high)",
+          expiryAsc: "Expiry (soonest)",
+          expiryDesc: "Expiry (latest)",
+          toBuyDesc: "To buy (high → low)",
+          toBuyAsc: "To buy (low → high)",
+        },
+      },
       table: {
         productsTitle: "Products inventory",
         catFoodTitle: "Cat food inventory",
@@ -153,6 +168,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
         purchaseDetail: "Spent {{price}} · {{amount}}",
       },
       pet: {
+        sort: {
+          label: "Sort by",
+          options: {
+            nameAsc: "Product (A–Z)",
+            nameDesc: "Product (Z–A)",
+            quantityDesc: "Quantity (high → low)",
+            quantityAsc: "Quantity (low → high)",
+            expiryAsc: "Expiry (soonest)",
+            expiryDesc: "Expiry (latest)",
+            toBuyDesc: "To buy (high → low)",
+            toBuyAsc: "To buy (low → high)",
+          },
+        },
         table: {
           count: "{{count}} items",
           loading: "Loading pet inventory...",
@@ -308,6 +336,18 @@ export const translations: Record<Language, Record<string, unknown>> = {
       inCalendar: "In calendar",
       empty: "No dishes yet. Use the button above to add the first one.",
       caloriesLabel: "≈ {{calories}} kcal",
+      sort: {
+        label: "Sort by",
+        options: {
+          nameAsc: "Name (A–Z)",
+          nameDesc: "Name (Z–A)",
+          mealAsc: "Meal slot",
+          caloriesDesc: "Calories (high → low)",
+          caloriesAsc: "Calories (low → high)",
+          ingredientsDesc: "Ingredients (most → least)",
+          ingredientsAsc: "Ingredients (least → most)",
+        },
+      },
       showMore: "Show more",
       detailsTitle: "Full recipe",
       detailsOpen: "Open dish",
@@ -359,6 +399,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
       start: "Start",
       end: "End",
       title: "Shopping list",
+      sort: {
+        label: "Sort items",
+        options: {
+          nameAsc: "Name (A–Z)",
+          nameDesc: "Name (Z–A)",
+          toBuyDesc: "To buy (high → low)",
+          toBuyAsc: "To buy (low → high)",
+          requiredDesc: "Required (high → low)",
+          requiredAsc: "Required (low → high)",
+          inStockDesc: "In stock (high → low)",
+          inStockAsc: "In stock (low → high)",
+        },
+      },
       loading: "Building…",
       empty: "No items in the selected range.",
       copy: "Copy",
@@ -460,6 +513,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         ingredient: "Product",
         reset: "Clear filters",
       },
+      sort: {
+        label: "Sort by",
+        options: {
+          dateDesc: "Date (newest)",
+          dateAsc: "Date (oldest)",
+          priceDesc: "Price (high → low)",
+          priceAsc: "Price (low → high)",
+          unitPriceDesc: "Unit price (high → low)",
+          unitPriceAsc: "Unit price (low → high)",
+          ingredientAsc: "Product (A–Z)",
+          ingredientDesc: "Product (Z–A)",
+          amountDesc: "Quantity (high → low)",
+          amountAsc: "Quantity (low → high)",
+        },
+      },
       table: {
         heading: "Purchase history",
         empty: "No purchases recorded yet.",
@@ -519,6 +587,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       },
       history: {
         heading: "Price history",
+        sort: {
+          label: "Sort history",
+          options: {
+            dateDesc: "Date (newest)",
+            dateAsc: "Date (oldest)",
+            priceDesc: "Price (high → low)",
+            priceAsc: "Price (low → high)",
+            unitPriceDesc: "Unit price (high → low)",
+            unitPriceAsc: "Unit price (low → high)",
+            ingredientAsc: "Product (A–Z)",
+            ingredientDesc: "Product (Z–A)",
+            amountDesc: "Quantity (high → low)",
+            amountAsc: "Quantity (low → high)",
+          },
+        },
         empty: "No purchases for the selected product.",
         columns: {
           date: "Date",
@@ -531,6 +614,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       top: {
         heading: "Top products by spend",
         subtitle: "Where most of your budget goes in the selected range.",
+        sort: {
+          label: "Sort table",
+          options: {
+            totalDesc: "Spent (high → low)",
+            totalAsc: "Spent (low → high)",
+            shareDesc: "Share (high → low)",
+            shareAsc: "Share (low → high)",
+            countDesc: "Purchases (high → low)",
+            countAsc: "Purchases (low → high)",
+            avgUnitPriceDesc: "Avg unit price (high → low)",
+            avgUnitPriceAsc: "Avg unit price (low → high)",
+            ingredientAsc: "Product (A–Z)",
+            ingredientDesc: "Product (Z–A)",
+          },
+        },
         empty: "Not enough data yet.",
         columns: {
           ingredient: "Product",
@@ -543,6 +641,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       caloriesTop: {
         heading: "Top products by calories",
         subtitle: "Products contributing the most calories in this range.",
+        sort: {
+          label: "Sort table",
+          options: {
+            caloriesDesc: "Calories (high → low)",
+            caloriesAsc: "Calories (low → high)",
+            shareDesc: "Share (high → low)",
+            shareAsc: "Share (low → high)",
+            countDesc: "Purchases (high → low)",
+            countAsc: "Purchases (low → high)",
+            quantityDesc: "Quantity (high → low)",
+            quantityAsc: "Quantity (low → high)",
+            ingredientAsc: "Product (A–Z)",
+            ingredientDesc: "Product (Z–A)",
+          },
+        },
         empty: "No calorie data available for this selection.",
         columns: {
           ingredient: "Product",
@@ -582,6 +695,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         costShareHint: "How much of total spend the filtered dishes represent.",
         avgCalories: "Calories per dish",
         avgCaloriesHint: "Average calories per dish in this range.",
+      },
+      sort: {
+        label: "Sort by",
+        options: {
+          nameAsc: "Dish (A–Z)",
+          nameDesc: "Dish (Z–A)",
+          costDesc: "Cost (high → low)",
+          costAsc: "Cost (low → high)",
+          caloriesDesc: "Calories (high → low)",
+          caloriesAsc: "Calories (low → high)",
+          missingDesc: "Missing ingredients (high → low)",
+          missingAsc: "Missing ingredients (low → high)",
+          ingredientsDesc: "Ingredients (most → least)",
+          ingredientsAsc: "Ingredients (least → most)",
+        },
       },
       table: {
         heading: "Dish breakdown",
@@ -650,6 +778,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         expired: "Прострочені",
         soon: "Скоро закінчується",
         restock: "Потрібне поповнення",
+      },
+      sort: {
+        label: "Сортувати",
+        options: {
+          nameAsc: "Назва (А–Я)",
+          nameDesc: "Назва (Я–А)",
+          categoryAsc: "Категорія (А–Я)",
+          categoryDesc: "Категорія (Я–А)",
+          quantityDesc: "К-ть (більше → менше)",
+          quantityAsc: "К-ть (менше → більше)",
+          expiryAsc: "Термін (найближчий)",
+          expiryDesc: "Термін (найдальший)",
+          toBuyDesc: "Докупити (більше → менше)",
+          toBuyAsc: "Докупити (менше → більше)",
+        },
       },
       table: {
         productsTitle: "Запаси продуктів",
@@ -744,6 +887,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
         purchaseDetail: "Витрачено {{price}} · {{amount}}",
       },
       pet: {
+        sort: {
+          label: "Сортувати",
+          options: {
+            nameAsc: "Продукт (А–Я)",
+            nameDesc: "Продукт (Я–А)",
+            quantityDesc: "К-ть (більше → менше)",
+            quantityAsc: "К-ть (менше → більше)",
+            expiryAsc: "Термін (найближчий)",
+            expiryDesc: "Термін (найдальший)",
+            toBuyDesc: "Докупити (більше → менше)",
+            toBuyAsc: "Докупити (менше → більше)",
+          },
+        },
         table: {
           count: "{{count}} позицій",
           loading: "Завантаження корму...",
@@ -899,6 +1055,18 @@ export const translations: Record<Language, Record<string, unknown>> = {
       inCalendar: "В календарі",
       empty: "Немає страв. Додай першу страву кнопкою вище.",
       caloriesLabel: "≈ {{calories}} ккал",
+      sort: {
+        label: "Сортувати",
+        options: {
+          nameAsc: "Назва (А–Я)",
+          nameDesc: "Назва (Я–А)",
+          mealAsc: "Пора дня",
+          caloriesDesc: "Калорії (більше → менше)",
+          caloriesAsc: "Калорії (менше → більше)",
+          ingredientsDesc: "Інгредієнти (більше → менше)",
+          ingredientsAsc: "Інгредієнти (менше → більше)",
+        },
+      },
       showMore: "Показати більше",
       detailsTitle: "Повний рецепт",
       detailsOpen: "Перейти до страви",
@@ -950,6 +1118,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
       start: "Початок",
       end: "Кінець",
       title: "Список покупок",
+      sort: {
+        label: "Сортувати",
+        options: {
+          nameAsc: "Назва (А–Я)",
+          nameDesc: "Назва (Я–А)",
+          toBuyDesc: "Купити (більше → менше)",
+          toBuyAsc: "Купити (менше → більше)",
+          requiredDesc: "Потрібно (більше → менше)",
+          requiredAsc: "Потрібно (менше → більше)",
+          inStockDesc: "В наявності (більше → менше)",
+          inStockAsc: "В наявності (менше → більше)",
+        },
+      },
       loading: "Формування…",
       empty: "Немає позицій у вибраному діапазоні.",
       copy: "Копіювати",
@@ -1051,6 +1232,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         ingredient: "Продукт",
         reset: "Скинути фільтри",
       },
+      sort: {
+        label: "Сортувати",
+        options: {
+          dateDesc: "Дата (новіші)",
+          dateAsc: "Дата (старіші)",
+          priceDesc: "Вартість (більше → менше)",
+          priceAsc: "Вартість (менше → більше)",
+          unitPriceDesc: "Ціна за одиницю (більше → менше)",
+          unitPriceAsc: "Ціна за одиницю (менше → більше)",
+          ingredientAsc: "Продукт (А–Я)",
+          ingredientDesc: "Продукт (Я–А)",
+          amountDesc: "Кількість (більше → менше)",
+          amountAsc: "Кількість (менше → більше)",
+        },
+      },
       table: {
         heading: "Історія покупок",
         empty: "Ще немає жодної покупки.",
@@ -1110,6 +1306,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       },
       history: {
         heading: "Історія цін",
+        sort: {
+          label: "Сортувати історію",
+          options: {
+            dateDesc: "Дата (новіші)",
+            dateAsc: "Дата (старіші)",
+            priceDesc: "Вартість (більше → менше)",
+            priceAsc: "Вартість (менше → більше)",
+            unitPriceDesc: "Ціна за одиницю (більше → менше)",
+            unitPriceAsc: "Ціна за одиницю (менше → більше)",
+            ingredientAsc: "Продукт (А–Я)",
+            ingredientDesc: "Продукт (Я–А)",
+            amountDesc: "Кількість (більше → менше)",
+            amountAsc: "Кількість (менше → більше)",
+          },
+        },
         empty: "Немає покупок для вибраного продукту.",
         columns: {
           date: "Дата",
@@ -1122,6 +1333,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       top: {
         heading: "Найбільші витрати за продуктами",
         subtitle: "Продукти, на які йде найбільша частка бюджету у вибраному діапазоні.",
+        sort: {
+          label: "Сортувати таблицю",
+          options: {
+            totalDesc: "Витрачено (більше → менше)",
+            totalAsc: "Витрачено (менше → більше)",
+            shareDesc: "Частка (більше → менше)",
+            shareAsc: "Частка (менше → більше)",
+            countDesc: "Покупки (більше → менше)",
+            countAsc: "Покупки (менше → більше)",
+            avgUnitPriceDesc: "Сер. ціна (більше → менше)",
+            avgUnitPriceAsc: "Сер. ціна (менше → більше)",
+            ingredientAsc: "Продукт (А–Я)",
+            ingredientDesc: "Продукт (Я–А)",
+          },
+        },
         empty: "Поки недостатньо даних.",
         columns: {
           ingredient: "Продукт",
@@ -1134,6 +1360,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       caloriesTop: {
         heading: "Найкалорійніші продукти",
         subtitle: "Продукти, що додають найбільше калорій у вибраному діапазоні.",
+        sort: {
+          label: "Сортувати таблицю",
+          options: {
+            caloriesDesc: "Калорії (більше → менше)",
+            caloriesAsc: "Калорії (менше → більше)",
+            shareDesc: "Частка (більше → менше)",
+            shareAsc: "Частка (менше → більше)",
+            countDesc: "Покупки (більше → менше)",
+            countAsc: "Покупки (менше → більше)",
+            quantityDesc: "Кількість (більше → менше)",
+            quantityAsc: "Кількість (менше → більше)",
+            ingredientAsc: "Продукт (А–Я)",
+            ingredientDesc: "Продукт (Я–А)",
+          },
+        },
         empty: "Недостатньо даних по калорійності.",
         columns: {
           ingredient: "Продукт",
@@ -1173,6 +1414,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         costShareHint: "Яку частину витрат складають ці страви.",
         avgCalories: "Калорійність страви",
         avgCaloriesHint: "Середня калорійність страв у вибраному діапазоні.",
+      },
+      sort: {
+        label: "Сортувати",
+        options: {
+          nameAsc: "Страва (А–Я)",
+          nameDesc: "Страва (Я–А)",
+          costDesc: "Вартість (більше → менше)",
+          costAsc: "Вартість (менше → більше)",
+          caloriesDesc: "Калорії (більше → менше)",
+          caloriesAsc: "Калорії (менше → більше)",
+          missingDesc: "Пропущені інгредієнти (більше → менше)",
+          missingAsc: "Пропущені інгредієнти (менше → більше)",
+          ingredientsDesc: "Інгредієнти (більше → менше)",
+          ingredientsAsc: "Інгредієнти (менше → більше)",
+        },
       },
       table: {
         heading: "Деталі страв",
@@ -1241,6 +1497,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         expired: "Przeterminowane",
         soon: "Wygasa wkrótce",
         restock: "Do uzupełnienia",
+      },
+      sort: {
+        label: "Sortuj",
+        options: {
+          nameAsc: "Nazwa (A–Z)",
+          nameDesc: "Nazwa (Z–A)",
+          categoryAsc: "Kategoria (A–Z)",
+          categoryDesc: "Kategoria (Z–A)",
+          quantityDesc: "Ilość (więcej → mniej)",
+          quantityAsc: "Ilość (mniej → więcej)",
+          expiryAsc: "Ważność (najszybciej)",
+          expiryDesc: "Ważność (najpóźniej)",
+          toBuyDesc: "Do kupienia (więcej → mniej)",
+          toBuyAsc: "Do kupienia (mniej → więcej)",
+        },
       },
       table: {
         productsTitle: "Zapasy produktów",
@@ -1335,6 +1606,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
         purchaseDetail: "Wydano {{price}} · {{amount}}",
       },
       pet: {
+        sort: {
+          label: "Sortuj",
+          options: {
+            nameAsc: "Produkt (A–Z)",
+            nameDesc: "Produkt (Z–A)",
+            quantityDesc: "Ilość (więcej → mniej)",
+            quantityAsc: "Ilość (mniej → więcej)",
+            expiryAsc: "Ważność (najszybciej)",
+            expiryDesc: "Ważność (najpóźniej)",
+            toBuyDesc: "Do kupienia (więcej → mniej)",
+            toBuyAsc: "Do kupienia (mniej → więcej)",
+          },
+        },
         table: {
           count: "{{count}} pozycji",
           loading: "Ładowanie karmy...",
@@ -1490,6 +1774,18 @@ export const translations: Record<Language, Record<string, unknown>> = {
       inCalendar: "W kalendarzu",
       empty: "Brak dań. Użyj przycisku powyżej, aby dodać pierwsze.",
       caloriesLabel: "≈ {{calories}} kcal",
+      sort: {
+        label: "Sortuj",
+        options: {
+          nameAsc: "Nazwa (A–Z)",
+          nameDesc: "Nazwa (Z–A)",
+          mealAsc: "Pora dnia",
+          caloriesDesc: "Kalorie (więcej → mniej)",
+          caloriesAsc: "Kalorie (mniej → więcej)",
+          ingredientsDesc: "Składniki (więcej → mniej)",
+          ingredientsAsc: "Składniki (mniej → więcej)",
+        },
+      },
       showMore: "Pokaż więcej",
       detailsTitle: "Pełny przepis",
       detailsOpen: "Otwórz danie",
@@ -1541,6 +1837,19 @@ export const translations: Record<Language, Record<string, unknown>> = {
       start: "Początek",
       end: "Koniec",
       title: "Lista zakupów",
+      sort: {
+        label: "Sortuj",
+        options: {
+          nameAsc: "Nazwa (A–Z)",
+          nameDesc: "Nazwa (Z–A)",
+          toBuyDesc: "Do kupienia (więcej → mniej)",
+          toBuyAsc: "Do kupienia (mniej → więcej)",
+          requiredDesc: "Potrzeba (więcej → mniej)",
+          requiredAsc: "Potrzeba (mniej → więcej)",
+          inStockDesc: "Na stanie (więcej → mniej)",
+          inStockAsc: "Na stanie (mniej → więcej)",
+        },
+      },
       loading: "Tworzenie…",
       empty: "Brak pozycji w wybranym zakresie.",
       copy: "Kopiuj",
@@ -1642,6 +1951,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         ingredient: "Produkt",
         reset: "Wyczyść filtry",
       },
+      sort: {
+        label: "Sortuj",
+        options: {
+          dateDesc: "Data (najnowsze)",
+          dateAsc: "Data (najstarsze)",
+          priceDesc: "Cena (wysoka → niska)",
+          priceAsc: "Cena (niska → wysoka)",
+          unitPriceDesc: "Cena za jednostkę (wysoka → niska)",
+          unitPriceAsc: "Cena za jednostkę (niska → wysoka)",
+          ingredientAsc: "Produkt (A–Z)",
+          ingredientDesc: "Produkt (Z–A)",
+          amountDesc: "Ilość (więcej → mniej)",
+          amountAsc: "Ilość (mniej → więcej)",
+        },
+      },
       table: {
         heading: "Historia zakupów",
         empty: "Brak zapisanych zakupów.",
@@ -1701,6 +2025,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       },
       history: {
         heading: "Historia cen",
+        sort: {
+          label: "Sortuj historię",
+          options: {
+            dateDesc: "Data (najnowsze)",
+            dateAsc: "Data (najstarsze)",
+            priceDesc: "Cena (wysoka → niska)",
+            priceAsc: "Cena (niska → wysoka)",
+            unitPriceDesc: "Cena za jednostkę (wysoka → niska)",
+            unitPriceAsc: "Cena za jednostkę (niska → wysoka)",
+            ingredientAsc: "Produkt (A–Z)",
+            ingredientDesc: "Produkt (Z–A)",
+            amountDesc: "Ilość (więcej → mniej)",
+            amountAsc: "Ilość (mniej → więcej)",
+          },
+        },
         empty: "Brak zakupów dla wybranego produktu.",
         columns: {
           date: "Data",
@@ -1713,6 +2052,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       top: {
         heading: "Najdroższe produkty",
         subtitle: "Produkty, które pochłaniają największą część budżetu w tym zakresie.",
+        sort: {
+          label: "Sortuj tabelę",
+          options: {
+            totalDesc: "Wydano (więcej → mniej)",
+            totalAsc: "Wydano (mniej → więcej)",
+            shareDesc: "Udział (więcej → mniej)",
+            shareAsc: "Udział (mniej → więcej)",
+            countDesc: "Zakupy (więcej → mniej)",
+            countAsc: "Zakupy (mniej → więcej)",
+            avgUnitPriceDesc: "Śr. cena (więcej → mniej)",
+            avgUnitPriceAsc: "Śr. cena (mniej → więcej)",
+            ingredientAsc: "Produkt (A–Z)",
+            ingredientDesc: "Produkt (Z–A)",
+          },
+        },
         empty: "Brak wystarczającej liczby danych.",
         columns: {
           ingredient: "Produkt",
@@ -1725,6 +2079,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
       caloriesTop: {
         heading: "Produkty o największej kaloryczności",
         subtitle: "Największy udział kalorii w wybranym zakresie.",
+        sort: {
+          label: "Sortuj tabelę",
+          options: {
+            caloriesDesc: "Kalorie (więcej → mniej)",
+            caloriesAsc: "Kalorie (mniej → więcej)",
+            shareDesc: "Udział (więcej → mniej)",
+            shareAsc: "Udział (mniej → więcej)",
+            countDesc: "Zakupy (więcej → mniej)",
+            countAsc: "Zakupy (mniej → więcej)",
+            quantityDesc: "Ilość (więcej → mniej)",
+            quantityAsc: "Ilość (mniej → więcej)",
+            ingredientAsc: "Produkt (A–Z)",
+            ingredientDesc: "Produkt (Z–A)",
+          },
+        },
         empty: "Brak danych o kaloryczności dla tego wyboru.",
         columns: {
           ingredient: "Produkt",
@@ -1764,6 +2133,21 @@ export const translations: Record<Language, Record<string, unknown>> = {
         costShareHint: "Jaka część budżetu przypada na te potrawy.",
         avgCalories: "Kalorie na potrawę",
         avgCaloriesHint: "Średnia liczba kalorii w wybranym zakresie.",
+      },
+      sort: {
+        label: "Sortuj",
+        options: {
+          nameAsc: "Potrawa (A–Z)",
+          nameDesc: "Potrawa (Z–A)",
+          costDesc: "Koszt (wysoki → niski)",
+          costAsc: "Koszt (niski → wysoki)",
+          caloriesDesc: "Kalorie (więcej → mniej)",
+          caloriesAsc: "Kalorie (mniej → więcej)",
+          missingDesc: "Brakujące składniki (więcej → mniej)",
+          missingAsc: "Brakujące składniki (mniej → więcej)",
+          ingredientsDesc: "Składniki (więcej → mniej)",
+          ingredientsAsc: "Składniki (mniej → więcej)",
+        },
       },
       table: {
         heading: "Szczegóły potraw",
