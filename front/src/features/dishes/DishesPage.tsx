@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import AutocompleteInput from "../../components/AutocompleteInput";
 import { EmptyState } from "../../components/EmptyState";
 import { SectionHeader } from "../../components/SectionHeader";
+import { StatusBadge } from "../../components/StatusBadge";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
@@ -351,8 +352,10 @@ export function DishesPage({
                 </div>
                 <div className="mt-3 flex items-center justify-between">
                   {usedDishIds.has(dish.id) && (
-                    <div className="inline-block text-xs px-3 py-1 rounded bg-gray-100">
+                    <div>
+                      <StatusBadge tone="info">
                       {t("dishes.inCalendar")}
+                      </StatusBadge>
                     </div>
                   )}
                   {showMore && (

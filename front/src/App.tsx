@@ -8,6 +8,7 @@ import { MEASUREMENT_UNITS } from "./constants/measurementUnits";
 import { INVENTORY_CATEGORIES, INVENTORY_LOCATIONS } from "./constants/inventoryDefaults";
 
 import {HeaderMenu} from "./components/HeaderMenu";
+import { InlineAlert } from "./components/InlineAlert";
 import {LanguageSwitcher} from "./components/LanguageSwitcher";
 import {TabButton} from "./components/TabButton";
 
@@ -592,14 +593,10 @@ function App() {
             <main className="flex-1">
                 <div className="mx-auto max-w-7xl px-2 py-4 sm:px-4 space-y-4">
                     {loadingData && (
-                        <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-600">
-                            {t("app.loading")}
-                        </div>
+                        <InlineAlert tone="info" message={t("app.loading")} />
                     )}
                     {globalError && (
-                        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                            {globalError}
-                        </div>
+                        <InlineAlert tone="error" message={globalError} />
                     )}
 
                     {activeTab === "calendar" && (

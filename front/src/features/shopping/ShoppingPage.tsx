@@ -4,6 +4,7 @@ import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
 import { SectionHeader } from "../../components/SectionHeader";
+import { StatusBadge } from "../../components/StatusBadge";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption, ShoppingListItem, ShoppingListResponse } from "../../types";
 import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
@@ -458,8 +459,21 @@ export function ShoppingPage({
                       <tbody className="divide-y divide-gray-100">
                         {entries.map(({ item, displayName, requiredQty, inStockQty, toBuyQty }) => {
                           const key = shoppingKey(item);
+                          const isDone = checked[key] ?? false;
+                          const hasToBuy = toBuyQty > 0;
+                          const statusTone = isDone ? "success" : hasToBuy ? "warn" : "info";
+                          const statusLabel = isDone
+                            ? (t("shopping.columns.done") as string)
+                            : hasToBuy
+                              ? (t("shopping.columns.toBuy") as string)
+                              : (t("shopping.columns.inStock") as string);
+                          const toBuyClass = isDone
+                            ? "text-[color:var(--ui-muted)] line-through"
+                            : hasToBuy
+                              ? "font-semibold text-[color:var(--ui-warn-text)]"
+                              : "text-[color:var(--ui-muted)]";
                           return (
-                            <tr key={key} className="bg-white">
+                            <tr key={key} className={isDone ? "bg-[color:var(--ui-success-bg)]" : "bg-white"}>
                               <td className="px-3 py-2">
                                 <input
                                   type="checkbox"
@@ -468,10 +482,15 @@ export function ShoppingPage({
                                   onChange={() => toggleItem(item)}
                                 />
                               </td>
-                              <td className="px-3 py-2">{displayName}</td>
+                              <td className="px-3 py-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span>{displayName}</span>
+                                  <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>
+                                </div>
+                              </td>
                               <td className="px-3 py-2">{Number(requiredQty.toFixed(2))}</td>
                               <td className="px-3 py-2">{Number(inStockQty.toFixed(2))}</td>
-                              <td className="px-3 py-2">{Number(toBuyQty.toFixed(2))}</td>
+                              <td className={`px-3 py-2 ${toBuyClass}`}>{Number(toBuyQty.toFixed(2))}</td>
                               <td className="px-3 py-2">{formatUnit(item.unit)}</td>
                             </tr>
                           );

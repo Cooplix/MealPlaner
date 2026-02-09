@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
 import { SectionHeader } from "../../components/SectionHeader";
+import { StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { Language } from "../../i18n";
@@ -435,8 +436,10 @@ function DishCard({ summary, dish, currencyFormatter, ingredientOptions, languag
         <div className="text-right">
           <div className="text-sm text-gray-500">{currencyFormatter.format(summary.totalCost)}</div>
           {summary.missingIngredients.length > 0 && (
-            <div className="text-xs text-amber-600">
-              Missing {summary.missingIngredients.length} ingredient{summary.missingIngredients.length > 1 ? "s" : ""}
+            <div className="mt-2 flex justify-end">
+              <StatusBadge tone="warn">
+                Missing {summary.missingIngredients.length} ingredient{summary.missingIngredients.length > 1 ? "s" : ""}
+              </StatusBadge>
             </div>
           )}
         </div>
@@ -466,10 +469,16 @@ function DishCard({ summary, dish, currencyFormatter, ingredientOptions, languag
       </table>
 
       {summary.missingIngredients.length > 0 && (
-        <div className="mt-3 text-xs text-amber-700">
-          Missing price data for:{" "}
-          {sortedMissing.map((item) => `${item.ingredient} (${item.unit})`).join(", ")}
-        </div>
+        <InlineAlert
+          tone="warn"
+          message={
+            <>
+              Missing price data for:{" "}
+              {sortedMissing.map((item) => `${item.ingredient} (${item.unit})`).join(", ")}
+            </>
+          }
+          className="mt-3"
+        />
       )}
     </div>
   );

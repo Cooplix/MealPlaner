@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { InlineAlert } from "../../components/InlineAlert";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { CalorieEntry, IngredientOption } from "../../types";
@@ -261,8 +262,8 @@ export function CaloriesPage({ ingredients, entries, units, onAddEntry, onUpdate
             </button>
           </div>
           {error && (
-            <div className="md:col-span-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
+            <div className="md:col-span-5">
+              <InlineAlert tone="error" message={error} />
             </div>
           )}
         </form>

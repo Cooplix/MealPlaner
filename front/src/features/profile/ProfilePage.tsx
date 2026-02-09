@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
 import { api } from "../../api";
+import { InlineAlert } from "../../components/InlineAlert";
 import { useTranslation } from "../../i18n";
 import type { UserProfile } from "../../types";
 
@@ -186,14 +187,10 @@ export function ProfilePage({ user, onUserChange }: ProfilePageProps) {
             />
           </div>
           {nameError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {nameError}
-            </div>
+            <InlineAlert tone="error" message={nameError} />
           )}
           {nameSuccess && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {nameSuccess}
-            </div>
+            <InlineAlert tone="success" message={nameSuccess} />
           )}
           <button
             type="submit"
@@ -252,14 +249,10 @@ export function ProfilePage({ user, onUserChange }: ProfilePageProps) {
             />
           </div>
           {passwordError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {passwordError}
-            </div>
+            <InlineAlert tone="error" message={passwordError} />
           )}
           {passwordSuccess && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {passwordSuccess}
-            </div>
+            <InlineAlert tone="success" message={passwordSuccess} />
           )}
           <button
             type="submit"
@@ -339,14 +332,10 @@ export function ProfilePage({ user, onUserChange }: ProfilePageProps) {
               <span>{t("profile.admin.adminLabel")}</span>
             </label>
             {newUserError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {newUserError}
-              </div>
+              <InlineAlert tone="error" message={newUserError} />
             )}
             {newUserSuccess && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {newUserSuccess}
-              </div>
+              <InlineAlert tone="success" message={newUserSuccess} />
             )}
             <button
               type="submit"

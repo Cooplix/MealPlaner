@@ -72,13 +72,13 @@ type PetFormState = {
 function eventTone(event: InventoryEvent): string {
   switch (event.priority) {
     case "critical":
-      return "border-red-200 bg-red-50";
+      return "border-[color:var(--ui-error-border)] bg-[color:var(--ui-error-bg)]";
     case "high":
-      return "border-rose-200 bg-rose-50";
+      return "border-[color:var(--ui-warn-border)] bg-[color:var(--ui-warn-bg)]";
     case "medium":
-      return "border-amber-200 bg-amber-50";
+      return "border-[color:var(--ui-info-border)] bg-[color:var(--ui-info-bg)]";
     default:
-      return "border-gray-100 bg-gray-50";
+      return "border-[color:var(--ui-border)] bg-[color:var(--ui-neutral-bg)]";
   }
 }
 
@@ -1069,21 +1069,21 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                                 <div className="flex justify-end gap-2">
                                   <button
                                     type="button"
-                                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                    className="text-xs font-medium text-[color:var(--ui-info-text)] hover:opacity-80"
                                     onClick={() => openConsume(item)}
                                   >
                                     {t("inventory.consume.button")}
                                   </button>
                                   <button
                                     type="button"
-                                    className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                                    className="text-xs font-medium text-[color:var(--ui-success-text)] hover:opacity-80"
                                     onClick={() => openEdit(item)}
                                   >
                                     {t("inventory.form.editButton")}
                                   </button>
                                   <button
                                     type="button"
-                                    className="text-xs font-medium text-red-600 hover:text-red-700"
+                                    className="text-xs font-medium text-[color:var(--ui-error-text)] hover:opacity-80"
                                     onClick={() => deleteItem(item)}
                                   >
                                     {t("inventory.form.deleteButton")}
@@ -1202,21 +1202,21 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                               <div className="flex justify-end gap-2">
                                 <button
                                   type="button"
-                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                  className="text-xs font-medium text-[color:var(--ui-info-text)] hover:opacity-80"
                                   onClick={() => openPetConsume(item)}
                                 >
                                   {t("inventory.pet.consume.button")}
                                 </button>
                                 <button
                                   type="button"
-                                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                                  className="text-xs font-medium text-[color:var(--ui-success-text)] hover:opacity-80"
                                   onClick={() => openPetForm("edit", item)}
                                 >
                                   {t("inventory.pet.form.editButton")}
                                 </button>
                                 <button
                                   type="button"
-                                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                                  className="text-xs font-medium text-[color:var(--ui-error-text)] hover:opacity-80"
                                   onClick={() => deletePetItem(item)}
                                 >
                                   {t("inventory.pet.form.deleteButton")}
@@ -1425,9 +1425,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 </div>
               </div>
               {formError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {formError}
-                </div>
+                <InlineAlert tone="error" message={formError} />
               )}
               <div className="flex flex-wrap justify-end gap-2">
                 <button
@@ -1472,43 +1470,37 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 ✕
               </button>
             </div>
-            <form className="mt-4 space-y-4" onSubmit={submitConsume}>
-              <div>
-                <label className="text-sm text-gray-600">{t("inventory.consume.amount")}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={consumeForm.amount}
-                  onChange={(event) =>
-                    setConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
-                  }
-                />
-              </div>
-              {consumeError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {consumeError}
+              <form className="mt-4 space-y-4" onSubmit={submitConsume}>
+                <div>
+                  <label className="text-sm text-gray-600">{t("inventory.consume.amount")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={consumeForm.amount}
+                    onChange={(event) =>
+                      setConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
+                    }
+                  />
                 </div>
-              )}
-              <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                  onClick={closeConsume}
-                >
-                  {t("inventory.consume.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
-                  disabled={consumeSubmitting}
-                >
-                  {consumeSubmitting
-                    ? t("inventory.consume.saving")
-                    : t("inventory.consume.confirm")}
-                </button>
-              </div>
-            </form>
+                {consumeError && <InlineAlert tone="error" message={consumeError} />}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={closeConsume}
+                  >
+                    {t("inventory.consume.cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
+                    disabled={consumeSubmitting}
+                  >
+                    {consumeSubmitting ? t("inventory.consume.saving") : t("inventory.consume.confirm")}
+                  </button>
+                </div>
+              </form>
           </div>
         </div>
       )}
@@ -1686,9 +1678,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 </div>
               </div>
               {petFormError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {petFormError}
-                </div>
+                <InlineAlert tone="error" message={petFormError} />
               )}
               <div className="flex flex-wrap justify-end gap-2">
                 <button
@@ -1749,9 +1739,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 />
               </div>
               {petConsumeError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {petConsumeError}
-                </div>
+                <InlineAlert tone="error" message={petConsumeError} />
               )}
               <div className="flex flex-wrap justify-end gap-2">
                 <button

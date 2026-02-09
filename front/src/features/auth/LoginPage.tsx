@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { InlineAlert } from "../../components/InlineAlert";
 import { useTranslation } from "../../i18n";
 
 interface LoginPageProps {
@@ -54,9 +55,7 @@ export function LoginPage({ onSubmit, submitting, error }: LoginPageProps) {
           />
         </div>
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
+          <InlineAlert tone="error" message={error} />
         )}
         <button
           type="submit"
