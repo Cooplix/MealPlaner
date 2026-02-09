@@ -25,6 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-08 | UI/UX Improvement | Added alphabetical sorting and multi-sort controls for dishes, shopping, purchases, spending, dish costs, inventory | completed | Not run (not requested) | 32955b8 |
 | 2026-02-08 | UI/UX Improvement | Dishes search: include ingredient names and translations | completed | Not run (not requested) | dc4b5cb |
 | 2026-02-08 | UI/UX Improvement | Dish details modal: constrain height and enable scrolling | completed | Not run (not requested) | 378804f |
 | 2026-02-08 | UI/UX Improvement | Dishes list: uniform cards + show-more modal with full recipe preview | completed | Not run (not requested) | 29a2cd4 |
