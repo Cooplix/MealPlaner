@@ -124,6 +124,7 @@
 
 DoD:
 - Є погоджений UI spec документ.
+- Актуальний аудит зафіксовано в `docs/ui-audit-2026-02-09.md`.
 
 ### Крок 2. Design tokens і базові компоненти
 - Додати спільні компоненти (`StatusBadge`, `InlineAlert`, `SectionHeader`, `EmptyState`).

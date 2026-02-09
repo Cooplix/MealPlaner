@@ -1,6 +1,6 @@
 # Progress Tracking
 
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 ## Purpose
 Single source of truth for implementation progress across all active plans.
@@ -18,18 +18,21 @@ Single source of truth for implementation progress across all active plans.
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
 | Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 10 | completed | E2E smoke + API integration checks |
-| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 1 | planned | UI audit and token spec |
+| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 2 | planned | Base components + token palette |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
 
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-09 | UI/UX Improvement | Step 1: UI audit + spec snapshot document | completed | Documentation review | pending |
 | 2026-02-08 | UI/UX Improvement | Fix purchases page hook import after sorting updates | completed | Not run (not requested) | ec43b08 |
 | 2026-02-08 | UI/UX Improvement | Added alphabetical sorting and multi-sort controls for dishes, shopping, purchases, spending, dish costs, inventory | completed | Not run (not requested) | 32955b8 |
 | 2026-02-08 | UI/UX Improvement | Dishes search: include ingredient names and translations | completed | Not run (not requested) | dc4b5cb |
 | 2026-02-08 | UI/UX Improvement | Dish details modal: constrain height and enable scrolling | completed | Not run (not requested) | 378804f |
 | 2026-02-08 | UI/UX Improvement | Dishes list: uniform cards + show-more modal with full recipe preview | completed | Not run (not requested) | 29a2cd4 |
+| 2026-02-08 | Process / Maintenance | Set stable Docker container names for backend/frontend | completed | Not run (not requested) | da33279 |
+| 2026-02-08 | UI/UX Improvement | Replaced native datalist hints with custom autocomplete UI | completed | Not run (not requested) | de44e99 |
 | 2026-02-08 | Functions Unification | Step 10: E2E smoke flow (ingredients → dishes → plans → shopping → purchases → inventory → analytics) | completed | `scripts/step10-smoke.sh` | eb9ffa6 |
 | 2026-02-08 | Functions Unification | Step 10: fixed plan date filtering for range queries | completed | `scripts/step10-smoke.sh` | b4fa605 |
 | 2026-02-08 | Functions Unification | Step 9: ran migration (inventory ingredientKey backfill + localized unit normalization) | completed | `POST /api/migrations/step-9` (dry run + apply) | fd1d7c4 |
