@@ -18,13 +18,14 @@ Single source of truth for implementation progress across all active plans.
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
 | Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 10 | completed | E2E smoke + API integration checks |
-| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 3 | planned | Table/toolbar standards |
+| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 4 | planned | Statuses + color informativeness |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
 
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-09 | UI/UX Improvement | Step 3: standardized table toolbars (DataTableToolbar) + unified table styles for inventory/purchases/shopping | completed | `front: npm run lint` (warnings), `npm run build` | cf389a3 |
 | 2026-02-09 | UI/UX Improvement | Step 2: added UI tokens + base components (SectionHeader, InlineAlert, EmptyState, StatusBadge) and adopted on key pages | completed | Not run (not requested) | f597f64 |
 | 2026-02-09 | UI/UX Improvement | Step 1: UI audit + spec snapshot document | completed | Documentation review | 2014a66 |
 | 2026-02-08 | UI/UX Improvement | Fix purchases page hook import after sorting updates | completed | Not run (not requested) | ec43b08 |
