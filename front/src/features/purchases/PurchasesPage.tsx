@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -484,122 +485,123 @@ export function PurchasesPage({
       </section>
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">{t("purchases.table.heading")}</h2>
-          <p className="text-sm text-gray-500">
-            {t("purchases.summary.total", { value: totalLabel }) as string} · {purchaseCountLabel}
-          </p>
-        </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="block text-xs text-gray-500" htmlFor="purchases-filter-start">
-                {t("purchases.filters.start")}
-              </label>
-              <input
-                id="purchases-filter-start"
-                type="date"
-                className="mt-1 rounded-xl border px-3 py-2 text-sm"
-                value={filters.start}
-                onChange={(event) => setFilters((prev) => ({ ...prev, start: event.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500" htmlFor="purchases-filter-end">
-                {t("purchases.filters.end")}
-              </label>
-              <input
-                id="purchases-filter-end"
-                type="date"
-                className="mt-1 rounded-xl border px-3 py-2 text-sm"
-                value={filters.end}
-                onChange={(event) => setFilters((prev) => ({ ...prev, end: event.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500" htmlFor="purchases-filter-ingredient">
-                {t("purchases.filters.ingredient")}
-              </label>
-              <select
-                id="purchases-filter-ingredient"
-                className="mt-1 rounded-xl border px-3 py-2 text-sm"
-                value={filters.ingredientKey}
-                onChange={(event) => setFilters((prev) => ({ ...prev, ingredientKey: event.target.value }))}
+        <DataTableToolbar
+          title={t("purchases.table.heading") as string}
+          titleAs="h2"
+          meta={`${t("purchases.summary.total", { value: totalLabel }) as string} · ${purchaseCountLabel}`}
+          controls={
+            <>
+              <div className="w-full sm:w-40">
+                <label className="block text-xs font-medium text-gray-500" htmlFor="purchases-filter-start">
+                  {t("purchases.filters.start")}
+                </label>
+                <input
+                  id="purchases-filter-start"
+                  type="date"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  value={filters.start}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, start: event.target.value }))}
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <label className="block text-xs font-medium text-gray-500" htmlFor="purchases-filter-end">
+                  {t("purchases.filters.end")}
+                </label>
+                <input
+                  id="purchases-filter-end"
+                  type="date"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  value={filters.end}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, end: event.target.value }))}
+                />
+              </div>
+              <div className="w-full sm:w-64">
+                <label className="block text-xs font-medium text-gray-500" htmlFor="purchases-filter-ingredient">
+                  {t("purchases.filters.ingredient")}
+                </label>
+                <select
+                  id="purchases-filter-ingredient"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  value={filters.ingredientKey}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, ingredientKey: event.target.value }))}
+                >
+                  <option value="">{t("spending.filters.allProducts")}</option>
+                  {sortedIngredients.map((ingredient) => (
+                    <option key={ingredient.key} value={ingredient.key}>
+                      {getIngredientOptionLabel(ingredient, language)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-full sm:w-56">
+                <label className="block text-xs font-medium text-gray-500" htmlFor="purchases-filter-sort">
+                  {t("purchases.sort.label")}
+                </label>
+                <select
+                  id="purchases-filter-sort"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value)}
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="w-full sm:w-auto rounded-xl border px-3 py-2 text-sm font-medium"
+                onClick={resetFilters}
               >
-                <option value="">{t("spending.filters.allProducts")}</option>
-                {sortedIngredients.map((ingredient) => (
-                  <option key={ingredient.key} value={ingredient.key}>
-                    {getIngredientOptionLabel(ingredient, language)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500" htmlFor="purchases-filter-sort">
-                {t("purchases.sort.label")}
-              </label>
-              <select
-                id="purchases-filter-sort"
-                className="mt-1 rounded-xl border px-3 py-2 text-sm"
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value)}
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              className="rounded-xl border px-3 py-2 text-sm font-medium"
-              onClick={resetFilters}
-            >
-              {t("purchases.filters.reset")}
-            </button>
-          </div>
-        </div>
+                {t("purchases.filters.reset")}
+              </button>
+            </>
+          }
+        />
 
         {filteredPurchases.length === 0 ? (
           <EmptyState title={t("purchases.table.empty") as string} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500">
-                  <th className="py-2 pr-4">{t("purchases.table.columns.date")}</th>
-                  <th className="py-2 pr-4">{t("purchases.table.columns.ingredient")}</th>
-                  <th className="py-2 pr-4">{t("purchases.table.columns.quantity")}</th>
-                  <th className="py-2 pr-4">{t("purchases.table.columns.price")}</th>
-                  <th className="py-2 pr-4">{t("purchases.table.columns.unitPrice")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedPurchases.map(({ purchase, ingredientName }) => {
-                  const unitPriceInfo = computeUnitPrice(purchase);
-                  return (
-                    <tr key={purchase.id} className="border-b last:border-none">
-                      <td className="py-2 pr-4 text-gray-600">
-                        {new Date(purchase.purchasedAt).toLocaleString(locale)}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-900">{ingredientName}</td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {quantityFormatter.format(purchase.amount)} {formatUnit(purchase.unit)}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-900">
-                        {currencyFormatter.format(purchase.price)}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {unitPriceInfo
-                          ? `${currencyFormatter.format(unitPriceInfo.pricePerUnit)} / ${unitPriceInfo.unitLabel}`
-                          : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="overflow-hidden rounded-xl border border-[color:var(--ui-border)]">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-[color:var(--ui-surface-muted)] text-left text-xs font-semibold uppercase tracking-wide text-[color:var(--ui-muted)]">
+                  <tr>
+                    <th className="px-3 py-2">{t("purchases.table.columns.date")}</th>
+                    <th className="px-3 py-2">{t("purchases.table.columns.ingredient")}</th>
+                    <th className="px-3 py-2">{t("purchases.table.columns.quantity")}</th>
+                    <th className="px-3 py-2">{t("purchases.table.columns.price")}</th>
+                    <th className="px-3 py-2">{t("purchases.table.columns.unitPrice")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {sortedPurchases.map(({ purchase, ingredientName }) => {
+                    const unitPriceInfo = computeUnitPrice(purchase);
+                    return (
+                      <tr key={purchase.id} className="bg-white">
+                        <td className="px-3 py-2 text-gray-600">
+                          {new Date(purchase.purchasedAt).toLocaleString(locale)}
+                        </td>
+                        <td className="px-3 py-2 text-gray-900">{ingredientName}</td>
+                        <td className="px-3 py-2 text-gray-600">
+                          {quantityFormatter.format(purchase.amount)} {formatUnit(purchase.unit)}
+                        </td>
+                        <td className="px-3 py-2 text-gray-900">
+                          {currencyFormatter.format(purchase.price)}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">
+                          {unitPriceInfo
+                            ? `${currencyFormatter.format(unitPriceInfo.pricePerUnit)} / ${unitPriceInfo.unitLabel}`
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>

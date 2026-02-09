@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AutocompleteInput from "../../components/AutocompleteInput";
+import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -285,7 +286,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       if (item.category) unique.add(item.category);
     });
     return Array.from(unique).sort((a, b) => collator.compare(formatUnit(a), formatUnit(b)));
-  }, [sortedCategories, items, collator]);
+  }, [sortedCategories, items, collator, formatUnit]);
 
   const locationOptions = useMemo(() => {
     const unique = new Set<string>(sortedLocations);
@@ -293,7 +294,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       if (item.location) unique.add(item.location);
     });
     return Array.from(unique).sort((a, b) => collator.compare(formatUnit(a), formatUnit(b)));
-  }, [sortedLocations, items, collator]);
+  }, [sortedLocations, items, collator, formatUnit]);
 
   const unitOptions = useMemo(() => {
     const unique = new Set<string>(sortedUnits);
@@ -908,118 +909,119 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
           {t("inventory.tabs.catFood")}
         </button>
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <div className="grid gap-3 md:grid-cols-4">
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("inventory.filters.search")}
-            </label>
-            <input
-              type="text"
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder={t("inventory.filters.searchPlaceholder") as string}
-              value={filters.search}
-              onChange={(event) => updateFilter("search", event.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("inventory.filters.category")}
-            </label>
-            <select
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={filters.category}
-              onChange={(event) => updateFilter("category", event.target.value)}
-            >
-              <option value="all">{t("inventory.filters.all")}</option>
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("inventory.filters.location")}
-            </label>
-            <select
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={filters.location}
-              onChange={(event) => updateFilter("location", event.target.value)}
-            >
-              <option value="all">{t("inventory.filters.all")}</option>
-              {locationOptions.map((location) => (
-                <option key={location} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("inventory.filters.status")}
-            </label>
-            <select
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={filters.status}
-              onChange={(event) => updateFilter("status", event.target.value as InventoryFilters["status"])}
-            >
-              <option value="all">{t("inventory.filters.all")}</option>
-              <option value="expired">{t("inventory.filters.expired")}</option>
-              <option value="soon">{t("inventory.filters.soon")}</option>
-              <option value="restock">{t("inventory.filters.restock")}</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-6 border-t border-dashed border-gray-200 pt-6">
-          <div className="text-sm font-semibold text-gray-800">
-            {activeTab === "products"
-              ? t("inventory.table.productsTitle")
-              : t("inventory.table.catFoodTitle")}
-          </div>
-          {activeTab === "products" && (
-            <div className="mt-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
-                <div className="text-xs text-gray-500">
-                  {t("inventory.table.count", { count: filteredItems.length })}
-                </div>
-                <label className="text-xs text-gray-500">
-                  {t("inventory.sort.label")}
-                  <select
-                    className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700"
-                    value={sortMode}
-                    onChange={(event) => setSortMode(event.target.value)}
+      <div className="rounded-2xl border border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] p-6 shadow-sm space-y-4">
+        {activeTab === "products" ? (
+          <>
+            <DataTableToolbar
+              title={t("inventory.table.productsTitle") as string}
+              titleAs="h2"
+              meta={t("inventory.table.count", { count: filteredItems.length }) as string}
+              controls={
+                <>
+                  <div className="w-full sm:w-64">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-filter-search">
+                      {t("inventory.filters.search")}
+                    </label>
+                    <input
+                      id="inventory-filter-search"
+                      type="text"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      placeholder={t("inventory.filters.searchPlaceholder") as string}
+                      value={filters.search}
+                      onChange={(event) => updateFilter("search", event.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-filter-category">
+                      {t("inventory.filters.category")}
+                    </label>
+                    <select
+                      id="inventory-filter-category"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      value={filters.category}
+                      onChange={(event) => updateFilter("category", event.target.value)}
+                    >
+                      <option value="all">{t("inventory.filters.all")}</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-filter-location">
+                      {t("inventory.filters.location")}
+                    </label>
+                    <select
+                      id="inventory-filter-location"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      value={filters.location}
+                      onChange={(event) => updateFilter("location", event.target.value)}
+                    >
+                      <option value="all">{t("inventory.filters.all")}</option>
+                      {locationOptions.map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-filter-status">
+                      {t("inventory.filters.status")}
+                    </label>
+                    <select
+                      id="inventory-filter-status"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      value={filters.status}
+                      onChange={(event) => updateFilter("status", event.target.value as InventoryFilters["status"])}
+                    >
+                      <option value="all">{t("inventory.filters.all")}</option>
+                      <option value="expired">{t("inventory.filters.expired")}</option>
+                      <option value="soon">{t("inventory.filters.soon")}</option>
+                      <option value="restock">{t("inventory.filters.restock")}</option>
+                    </select>
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-sort">
+                      {t("inventory.sort.label")}
+                    </label>
+                    <select
+                      id="inventory-sort"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      value={sortMode}
+                      onChange={(event) => setSortMode(event.target.value)}
+                    >
+                      {sortOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                    onClick={openCreate}
                   >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
-                  onClick={openCreate}
-                >
-                  {t("inventory.form.addButton")}
-                </button>
-              </div>
-              {loading && (
-                <InlineAlert tone="info" message={t("inventory.table.loading") as string} />
-              )}
-              {error && (
-                <InlineAlert tone="error" message={t("inventory.table.error", { message: error }) as string} />
-              )}
-              {!loading && !error && filteredItems.length === 0 && (
-                <EmptyState title={t("inventory.table.empty") as string} />
-              )}
-              {!loading && !error && filteredItems.length > 0 && (
-                <div className="space-y-3">
-                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    {t("inventory.form.addButton")}
+                  </button>
+                </>
+              }
+            />
+
+            {loading && <InlineAlert tone="info" message={t("inventory.table.loading") as string} />}
+            {error && (
+              <InlineAlert tone="error" message={t("inventory.table.error", { message: error }) as string} />
+            )}
+            {!loading && !error && filteredItems.length === 0 && <EmptyState title={t("inventory.table.empty") as string} />}
+            {!loading && !error && filteredItems.length > 0 && (
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-xl border border-[color:var(--ui-border)]">
+                  <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                      <thead className="bg-[color:var(--ui-surface-muted)] text-left text-xs font-semibold uppercase tracking-wide text-[color:var(--ui-muted)]">
                         <tr>
                           <th className="px-3 py-2">{t("inventory.table.columns.name")}</th>
                           <th className="px-3 py-2">{t("inventory.table.columns.quantity")}</th>
@@ -1094,64 +1096,71 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                       </tbody>
                     </table>
                   </div>
-                  {visibleProductsCount < filteredItems.length && (
-                    <div className="flex justify-center">
-                      <button
-                        type="button"
-                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        onClick={() =>
-                          setVisibleProductsCount((prev) => Math.min(prev + DEFAULT_VISIBLE_PRODUCTS, filteredItems.length))
-                        }
-                      >
-                        {t("inventory.table.showMore")}
-                      </button>
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
-          )}
-          {activeTab === "catFood" && (
-            <div className="mt-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
-                <div className="text-xs text-gray-500">
-                  {t("inventory.pet.table.count", { count: petItems.length })}
-                </div>
-                <label className="text-xs text-gray-500">
-                  {t("inventory.pet.sort.label")}
-                  <select
-                    className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700"
-                    value={petSortMode}
-                    onChange={(event) => setPetSortMode(event.target.value)}
-                  >
-                    {petSortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
-                  onClick={() => openPetForm("create")}
-                >
-                  {t("inventory.pet.form.addButton")}
-                </button>
+                {visibleProductsCount < filteredItems.length && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      className="rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      onClick={() =>
+                        setVisibleProductsCount((prev) => Math.min(prev + DEFAULT_VISIBLE_PRODUCTS, filteredItems.length))
+                      }
+                    >
+                      {t("inventory.table.showMore")}
+                    </button>
+                  </div>
+                )}
               </div>
-              {petLoading && (
-                <InlineAlert tone="info" message={t("inventory.pet.table.loading") as string} />
-              )}
-              {petError && (
-                <InlineAlert tone="error" message={t("inventory.pet.table.error", { message: petError }) as string} />
-              )}
-              {!petLoading && !petError && petItems.length === 0 && (
-                <EmptyState title={t("inventory.pet.table.empty") as string} />
-              )}
-              {!petLoading && !petError && petItems.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
+            )}
+          </>
+        ) : (
+          <>
+            <DataTableToolbar
+              title={t("inventory.table.catFoodTitle") as string}
+              titleAs="h2"
+              meta={t("inventory.pet.table.count", { count: petItems.length }) as string}
+              controls={
+                <>
+                  <div className="w-full sm:w-48">
+                    <label className="block text-xs font-medium text-gray-500" htmlFor="inventory-pet-sort">
+                      {t("inventory.pet.sort.label")}
+                    </label>
+                    <select
+                      id="inventory-pet-sort"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                      value={petSortMode}
+                      onChange={(event) => setPetSortMode(event.target.value)}
+                    >
+                      {petSortOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                    onClick={() => openPetForm("create")}
+                  >
+                    {t("inventory.pet.form.addButton")}
+                  </button>
+                </>
+              }
+            />
+
+            {petLoading && <InlineAlert tone="info" message={t("inventory.pet.table.loading") as string} />}
+            {petError && (
+              <InlineAlert tone="error" message={t("inventory.pet.table.error", { message: petError }) as string} />
+            )}
+            {!petLoading && !petError && petItems.length === 0 && (
+              <EmptyState title={t("inventory.pet.table.empty") as string} />
+            )}
+            {!petLoading && !petError && petItems.length > 0 && (
+              <div className="overflow-hidden rounded-xl border border-[color:var(--ui-border)]">
+                <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <thead className="bg-[color:var(--ui-surface-muted)] text-left text-xs font-semibold uppercase tracking-wide text-[color:var(--ui-muted)]">
                       <tr>
                         <th className="px-3 py-2">{t("inventory.pet.table.columns.product")}</th>
                         <th className="px-3 py-2">{t("inventory.pet.table.columns.quantity")}</th>
@@ -1167,18 +1176,14 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                         const restock = getRestockStatus(item.quantity, item.minQty);
                         const toBuy = getToBuy(item.quantity, item.minQty, item.maxQty);
                         const title = `${item.manufacturer} ${item.productName}`.trim();
-                        const meta = [item.foodType, item.packageType, item.weight]
-                          .filter(Boolean)
-                          .join(" · ");
+                        const meta = [item.foodType, item.packageType, item.weight].filter(Boolean).join(" · ");
                         return (
                           <tr key={item.id} className="bg-white">
                             <td className="px-3 py-2">
                               <div className="font-medium text-gray-900">{title}</div>
                               <div className="text-xs text-gray-500">{meta || "—"}</div>
                             </td>
-                            <td className="px-3 py-2">
-                              {item.quantity}
-                            </td>
+                            <td className="px-3 py-2">{item.quantity}</td>
                             <td className="px-3 py-2">
                               {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
                             </td>
@@ -1192,9 +1197,7 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                                 </StatusBadge>
                               </div>
                             </td>
-                            <td className="px-3 py-2">
-                              {toBuy > 0 ? `${toBuy}` : "—"}
-                            </td>
+                            <td className="px-3 py-2">{toBuy > 0 ? `${toBuy}` : "—"}</td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex justify-end gap-2">
                                 <button
@@ -1226,10 +1229,10 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
       <div className="rounded-lg border border-gray-200 bg-white p-6">
         <div className="text-sm font-semibold text-gray-800">{t("inventory.events.title")}</div>

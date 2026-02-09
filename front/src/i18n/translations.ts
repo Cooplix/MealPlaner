@@ -400,6 +400,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       end: "End",
       title: "Shopping list",
       itemsHeading: "Items to buy",
+      summary: {
+        count: "{{count}} item(s)",
+      },
       sort: {
         label: "Sort items",
         options: {
@@ -1120,6 +1123,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       end: "Кінець",
       title: "Список покупок",
       itemsHeading: "Позиції до покупки",
+      summary: {
+        count: "{{count}} позицій",
+      },
       sort: {
         label: "Сортувати",
         options: {
@@ -1840,6 +1846,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
       end: "Koniec",
       title: "Lista zakupów",
       itemsHeading: "Pozycje do kupienia",
+      summary: {
+        count: "{{count}} pozycji",
+      },
       sort: {
         label: "Sortuj",
         options: {

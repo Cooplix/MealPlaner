@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
 import { SectionHeader } from "../../components/SectionHeader";
@@ -398,30 +399,33 @@ export function ShoppingPage({
       </div>
 
       <div className="rounded-2xl border bg-white p-4 shadow-sm space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-semibold text-gray-900">{t("shopping.itemsHeading")}</h3>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <span>{t("shopping.sort.label")}</span>
-              <select
-                className="rounded-xl border px-3 py-2 text-sm"
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value)}
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <ExportButton
-              items={items}
-              disabled={!items.length}
-              resolveIngredientName={resolveIngredientName}
-            />
-          </div>
-        </div>
+        <DataTableToolbar
+          title={t("shopping.itemsHeading") as string}
+          titleAs="h3"
+          meta={t("shopping.summary.count", { count: items.length }) as string}
+          controls={
+            <>
+              <div className="w-full sm:w-56">
+                <label className="block text-xs font-medium text-gray-500" htmlFor="shopping-sort">
+                  {t("shopping.sort.label")}
+                </label>
+                <select
+                  id="shopping-sort"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value)}
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <ExportButton items={items} disabled={!items.length} resolveIngredientName={resolveIngredientName} />
+            </>
+          }
+        />
         {error && (
           <InlineAlert tone="error" message={error} />
         )}
@@ -438,37 +442,44 @@ export function ShoppingPage({
             {sortedGroupedItems.map(({ category, entries }) => (
               <div key={category} className="space-y-2">
                 <div className="text-sm font-semibold text-gray-700">{category}</div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left border-b">
-                      <th className="py-2 w-12">{t("shopping.columns.done")}</th>
-                      <th className="py-2">{t("shopping.columns.product")}</th>
-                      <th className="py-2">{t("shopping.columns.required")}</th>
-                      <th className="py-2">{t("shopping.columns.inStock")}</th>
-                      <th className="py-2">{t("shopping.columns.toBuy")}</th>
-                      <th className="py-2">{t("shopping.columns.unit")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entries.map(({ item, displayName, requiredQty, inStockQty, toBuyQty }) => (
-                      <tr key={item.name + item.unit} className="border-b">
-                        <td className="py-2">
-                          <input
-                            type="checkbox"
-                            aria-label={`${t("shopping.columns.product")}: ${displayName}`}
-                            checked={checked[shoppingKey(item)] ?? false}
-                            onChange={() => toggleItem(item)}
-                          />
-                        </td>
-                        <td className="py-2">{displayName}</td>
-                        <td className="py-2">{Number(requiredQty.toFixed(2))}</td>
-                        <td className="py-2">{Number(inStockQty.toFixed(2))}</td>
-                        <td className="py-2">{Number(toBuyQty.toFixed(2))}</td>
-                        <td className="py-2">{formatUnit(item.unit)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-hidden rounded-xl border border-[color:var(--ui-border)] bg-white">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-[color:var(--ui-surface-muted)] text-left text-xs font-semibold uppercase tracking-wide text-[color:var(--ui-muted)]">
+                        <tr>
+                          <th className="px-3 py-2 w-12">{t("shopping.columns.done")}</th>
+                          <th className="px-3 py-2">{t("shopping.columns.product")}</th>
+                          <th className="px-3 py-2">{t("shopping.columns.required")}</th>
+                          <th className="px-3 py-2">{t("shopping.columns.inStock")}</th>
+                          <th className="px-3 py-2">{t("shopping.columns.toBuy")}</th>
+                          <th className="px-3 py-2">{t("shopping.columns.unit")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {entries.map(({ item, displayName, requiredQty, inStockQty, toBuyQty }) => {
+                          const key = shoppingKey(item);
+                          return (
+                            <tr key={key} className="bg-white">
+                              <td className="px-3 py-2">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`${t("shopping.columns.product")}: ${displayName}`}
+                                  checked={checked[key] ?? false}
+                                  onChange={() => toggleItem(item)}
+                                />
+                              </td>
+                              <td className="px-3 py-2">{displayName}</td>
+                              <td className="px-3 py-2">{Number(requiredQty.toFixed(2))}</td>
+                              <td className="px-3 py-2">{Number(inStockQty.toFixed(2))}</td>
+                              <td className="px-3 py-2">{Number(toBuyQty.toFixed(2))}</td>
+                              <td className="px-3 py-2">{formatUnit(item.unit)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -524,55 +535,57 @@ export function ShoppingPage({
                 </label>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b text-gray-500">
-                    <th className="py-2 pr-4">{t("shopping.purchase.columns.product")}</th>
-                    <th className="py-2 pr-4">{t("shopping.purchase.columns.amount")}</th>
-                    <th className="py-2 pr-4">{t("shopping.purchase.columns.unit")}</th>
-                    <th className="py-2 pr-4">{t("shopping.purchase.columns.price")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedSelectedEntries.map(({ item, displayName }) => {
-                    const key = shoppingKey(item);
-                    const draft = purchaseDrafts[key] ?? { amount: "", price: "" };
-                    return (
-                      <tr key={key} className="border-b last:border-none">
-                        <td className="py-2 pr-4">{displayName}</td>
-                        <td className="py-2 pr-4">
-                          <input
-                            className="w-28 rounded-lg border px-2 py-1"
-                            inputMode="decimal"
-                            value={draft.amount}
-                            onChange={(event) =>
-                              setPurchaseDrafts((prev) => ({
-                                ...prev,
-                                [key]: { ...draft, amount: event.target.value },
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="py-2 pr-4 text-gray-600">{formatUnit(item.unit)}</td>
-                        <td className="py-2 pr-4">
-                          <input
-                            className="w-28 rounded-lg border px-2 py-1"
-                            inputMode="decimal"
-                            value={draft.price}
-                            onChange={(event) =>
-                              setPurchaseDrafts((prev) => ({
-                                ...prev,
-                                [key]: { ...draft, price: event.target.value },
-                              }))
-                            }
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="overflow-hidden rounded-xl border border-[color:var(--ui-border)]">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-[color:var(--ui-surface-muted)] text-left text-xs font-semibold uppercase tracking-wide text-[color:var(--ui-muted)]">
+                    <tr>
+                      <th className="px-3 py-2">{t("shopping.purchase.columns.product")}</th>
+                      <th className="px-3 py-2">{t("shopping.purchase.columns.amount")}</th>
+                      <th className="px-3 py-2">{t("shopping.purchase.columns.unit")}</th>
+                      <th className="px-3 py-2">{t("shopping.purchase.columns.price")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {sortedSelectedEntries.map(({ item, displayName }) => {
+                      const key = shoppingKey(item);
+                      const draft = purchaseDrafts[key] ?? { amount: "", price: "" };
+                      return (
+                        <tr key={key} className="bg-white">
+                          <td className="px-3 py-2">{displayName}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              className="w-28 rounded-xl border px-2 py-1"
+                              inputMode="decimal"
+                              value={draft.amount}
+                              onChange={(event) =>
+                                setPurchaseDrafts((prev) => ({
+                                  ...prev,
+                                  [key]: { ...draft, amount: event.target.value },
+                                }))
+                              }
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-gray-600">{formatUnit(item.unit)}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              className="w-28 rounded-xl border px-2 py-1"
+                              inputMode="decimal"
+                              value={draft.price}
+                              onChange={(event) =>
+                                setPurchaseDrafts((prev) => ({
+                                  ...prev,
+                                  [key]: { ...draft, price: event.target.value },
+                                }))
+                              }
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
             {purchaseError && (
               <InlineAlert tone="error" message={purchaseError} />
@@ -650,10 +663,18 @@ function ExportButton({ items, disabled, resolveIngredientName }: ExportButtonPr
 
   return (
     <div className="flex gap-2">
-      <button className="text-sm px-2 py-1 rounded-lg border" onClick={copy} disabled={disabled}>
+      <button
+        className="rounded-xl border px-3 py-2 text-sm font-medium disabled:opacity-60"
+        onClick={copy}
+        disabled={disabled}
+      >
         {t("shopping.copy")}
       </button>
-      <button className="text-sm px-2 py-1 rounded-lg border" onClick={download} disabled={disabled}>
+      <button
+        className="rounded-xl border px-3 py-2 text-sm font-medium disabled:opacity-60"
+        onClick={download}
+        disabled={disabled}
+      >
         {t("shopping.download")}
       </button>
     </div>
