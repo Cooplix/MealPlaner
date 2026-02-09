@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { EmptyState } from "../../components/EmptyState";
+import { InlineAlert } from "../../components/InlineAlert";
+import { SectionHeader } from "../../components/SectionHeader";
 import { api } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { CalorieEntry, IngredientOption, PurchaseEntry, SpendingAnalyticsResponse } from "../../types";
@@ -378,19 +381,20 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{t("spending.title")}</h1>
-          <p className="text-sm text-gray-500">{t("spending.subtitle")}</p>
-        </div>
-        <button
-          className="rounded-xl border px-3 py-2 text-sm font-medium"
-          onClick={handleReload}
-          disabled={reloading}
-        >
-          {reloading ? "…" : (t("spending.reload") as string)}
-        </button>
-      </div>
+      <SectionHeader
+        title={t("spending.title") as string}
+        subtitle={t("spending.subtitle") as string}
+        titleAs="h1"
+        actions={
+          <button
+            className="rounded-xl border px-3 py-2 text-sm font-medium"
+            onClick={handleReload}
+            disabled={reloading}
+          >
+            {reloading ? "…" : (t("spending.reload") as string)}
+          </button>
+        }
+      />
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">{t("spending.filters.heading")}</h2>
@@ -439,12 +443,10 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           </div>
         </div>
         {analyticsError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {t("errors.loadAnalytics", { message: analyticsError })}
-          </div>
+          <InlineAlert tone="error" message={t("errors.loadAnalytics", { message: analyticsError }) as string} />
         )}
         {analyticsLoading && (
-          <div className="text-xs text-gray-500">{t("app.loading")}</div>
+          <InlineAlert tone="info" message={t("app.loading") as string} />
         )}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           <SummaryCard
@@ -508,9 +510,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">{t("spending.chart.heading")}</h2>
         {dailyTotals.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("spending.chart.empty")}
-          </div>
+          <EmptyState title={t("spending.chart.empty") as string} />
         ) : (
           <div className="overflow-x-auto">
             <div className="flex min-w-full items-end gap-4">
@@ -561,9 +561,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           </label>
         </div>
         {topSpenders.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("spending.top.empty")}
-          </div>
+          <EmptyState title={t("spending.top.empty") as string} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -626,9 +624,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           </label>
         </div>
         {topCalorieItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("spending.caloriesTop.empty")}
-          </div>
+          <EmptyState title={t("spending.caloriesTop.empty") as string} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -696,9 +692,7 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           </label>
         </div>
         {historyEntries.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("spending.history.empty")}
-          </div>
+          <EmptyState title={t("spending.history.empty") as string} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

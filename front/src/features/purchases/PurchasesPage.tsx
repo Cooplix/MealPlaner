@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { EmptyState } from "../../components/EmptyState";
+import { InlineAlert } from "../../components/InlineAlert";
+import { SectionHeader } from "../../components/SectionHeader";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption, PurchaseEntry } from "../../types";
@@ -340,12 +343,11 @@ export function PurchasesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{t("purchases.title")}</h1>
-          <p className="text-sm text-gray-500">{t("purchases.subtitle")}</p>
-        </div>
-        <div className="flex gap-2">
+      <SectionHeader
+        title={t("purchases.title") as string}
+        subtitle={t("purchases.subtitle") as string}
+        titleAs="h1"
+        actions={
           <button
             className="rounded-xl border px-3 py-2 text-sm font-medium"
             onClick={handleReload}
@@ -353,8 +355,8 @@ export function PurchasesPage({
           >
             {reloading ? "…" : (t("purchases.reload") as string)}
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">{t("purchases.form.heading")}</h2>
@@ -472,14 +474,10 @@ export function PurchasesPage({
               {t("purchases.form.applyToInventory")}
             </label>
             {formError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {formError}
-              </div>
+              <InlineAlert tone="error" message={formError} />
             )}
             {formSuccess && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {formSuccess}
-              </div>
+              <InlineAlert tone="success" message={formSuccess} />
             )}
           </div>
         </form>
@@ -564,9 +562,7 @@ export function PurchasesPage({
         </div>
 
         {filteredPurchases.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("purchases.table.empty")}
-          </div>
+          <EmptyState title={t("purchases.table.empty") as string} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

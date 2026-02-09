@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EmptyState } from "../../components/EmptyState";
+import { InlineAlert } from "../../components/InlineAlert";
+import { SectionHeader } from "../../components/SectionHeader";
 import { api } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { Language } from "../../i18n";
@@ -185,17 +188,16 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-gray-900">{t("dishCosts.title")}</h1>
-        <p className="text-sm text-gray-500">{t("dishCosts.subtitle")}</p>
-      </header>
+      <SectionHeader
+        title={t("dishCosts.title") as string}
+        subtitle={t("dishCosts.subtitle") as string}
+        titleAs="h1"
+      />
       {analyticsError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {t("errors.loadAnalytics", { message: analyticsError })}
-        </div>
+        <InlineAlert tone="error" message={t("errors.loadAnalytics", { message: analyticsError }) as string} />
       )}
       {analyticsLoading && (
-        <div className="text-xs text-gray-500">{t("app.loading")}</div>
+        <InlineAlert tone="info" message={t("app.loading") as string} />
       )}
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
@@ -327,9 +329,7 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
           </label>
         </div>
         {filteredDishes.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-gray-500">
-            {t("dishCosts.table.empty")}
-          </div>
+          <EmptyState title={t("dishCosts.table.empty") as string} />
         ) : (
           <div className="space-y-4">
             {sortedDishCosts.map((summary) => {

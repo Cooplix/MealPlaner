@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EmptyState } from "../../components/EmptyState";
+import { InlineAlert } from "../../components/InlineAlert";
+import { SectionHeader } from "../../components/SectionHeader";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption, ShoppingListItem, ShoppingListResponse } from "../../types";
 import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
@@ -369,6 +372,7 @@ export function ShoppingPage({
 
   return (
     <div className="space-y-4">
+      <SectionHeader title={t("shopping.title") as string} titleAs="h1" />
       <div className="rounded-2xl border bg-white p-4 shadow-sm">
         <h3 className="font-semibold text-gray-900">{t("shopping.dateRange")}</h3>
         <div className="mt-2 grid sm:grid-cols-2 gap-3">
@@ -395,7 +399,7 @@ export function ShoppingPage({
 
       <div className="rounded-2xl border bg-white p-4 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-semibold text-gray-900">{t("shopping.title")}</h3>
+          <h3 className="font-semibold text-gray-900">{t("shopping.itemsHeading")}</h3>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <span>{t("shopping.sort.label")}</span>
@@ -419,18 +423,17 @@ export function ShoppingPage({
           </div>
         </div>
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
+          <InlineAlert tone="error" message={error} />
         )}
         {loading ? (
-          <div className="text-gray-500">{t("shopping.loading")}</div>
+          <InlineAlert tone="info" message={t("shopping.loading") as string} />
         ) : sortedGroupedItems.length ? (
           <div className="space-y-6">
             {inventoryError && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                {t("shopping.purchase.inventoryWarning", { message: inventoryError })}
-              </div>
+              <InlineAlert
+                tone="warn"
+                message={t("shopping.purchase.inventoryWarning", { message: inventoryError }) as string}
+              />
             )}
             {sortedGroupedItems.map(({ category, entries }) => (
               <div key={category} className="space-y-2">
@@ -470,7 +473,7 @@ export function ShoppingPage({
             ))}
           </div>
         ) : (
-          <div className="text-gray-500">{t("shopping.empty")}</div>
+          <EmptyState title={t("shopping.empty") as string} />
         )}
       </div>
       <div className="rounded-2xl border bg-white p-4 shadow-sm space-y-3">
@@ -481,7 +484,7 @@ export function ShoppingPage({
           </div>
         </div>
         {!selectedEntries.length ? (
-          <div className="text-sm text-gray-500">{t("shopping.purchase.empty")}</div>
+          <EmptyState title={t("shopping.purchase.empty") as string} />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -572,9 +575,7 @@ export function ShoppingPage({
               </table>
             </div>
             {purchaseError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {purchaseError}
-              </div>
+              <InlineAlert tone="error" message={purchaseError} />
             )}
             <div>
               <button

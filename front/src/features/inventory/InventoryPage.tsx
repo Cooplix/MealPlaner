@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AutocompleteInput from "../../components/AutocompleteInput";
+import { EmptyState } from "../../components/EmptyState";
+import { InlineAlert } from "../../components/InlineAlert";
+import { SectionHeader } from "../../components/SectionHeader";
+import { StatusBadge } from "../../components/StatusBadge";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
 import { findIngredientOption, getIngredientOptionLabel } from "../../utils/ingredientNames";
@@ -9,6 +13,7 @@ import type { InventoryEvent, InventoryFilters, InventoryItem, PetFoodItem } fro
 
 type InventoryTab = "products" | "catFood";
 type InventoryFormMode = "create" | "edit";
+type StatusTone = "success" | "info" | "warn" | "error" | "neutral";
 
 type InventoryFormState = {
   ingredientKey: string;
@@ -74,6 +79,23 @@ function eventTone(event: InventoryEvent): string {
     default:
       return "border-gray-100 bg-gray-50";
   }
+}
+
+function expiryTone(status: string): StatusTone {
+  switch (status) {
+    case "EXPIRED":
+      return "error";
+    case "<=14d":
+      return "warn";
+    case "<=30d":
+      return "info";
+    default:
+      return "success";
+  }
+}
+
+function restockTone(status: string): StatusTone {
+  return status === "RESTOCK" ? "warn" : "success";
 }
 
 type InventoryPageProps = {
@@ -857,10 +879,11 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">{t("inventory.title")}</h1>
-        <p className="text-sm text-gray-500">{t("inventory.subtitle")}</p>
-      </div>
+      <SectionHeader
+        title={t("inventory.title") as string}
+        subtitle={t("inventory.subtitle") as string}
+        titleAs="h1"
+      />
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -984,19 +1007,13 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 </button>
               </div>
               {loading && (
-                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  {t("inventory.table.loading")}
-                </div>
+                <InlineAlert tone="info" message={t("inventory.table.loading") as string} />
               )}
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {t("inventory.table.error", { message: error })}
-                </div>
+                <InlineAlert tone="error" message={t("inventory.table.error", { message: error }) as string} />
               )}
               {!loading && !error && filteredItems.length === 0 && (
-                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  {t("inventory.table.empty")}
-                </div>
+                <EmptyState title={t("inventory.table.empty") as string} />
               )}
               {!loading && !error && filteredItems.length > 0 && (
                 <div className="space-y-3">
@@ -1034,9 +1051,13 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                                 {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
                               </td>
                               <td className="px-3 py-2">
-                                <div className="flex flex-col text-xs text-gray-600">
-                                  <span>{t(`inventory.status.expiry.${expiry}`)}</span>
-                                  <span>{t(`inventory.status.restock.${restock}`)}</span>
+                                <div className="flex flex-col gap-1">
+                                  <StatusBadge tone={expiryTone(expiry)}>
+                                    {t(`inventory.status.expiry.${expiry}`)}
+                                  </StatusBadge>
+                                  <StatusBadge tone={restockTone(restock)}>
+                                    {t(`inventory.status.restock.${restock}`)}
+                                  </StatusBadge>
                                 </div>
                               </td>
                               <td className="px-3 py-2">
@@ -1119,19 +1140,13 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 </button>
               </div>
               {petLoading && (
-                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  {t("inventory.pet.table.loading")}
-                </div>
+                <InlineAlert tone="info" message={t("inventory.pet.table.loading") as string} />
               )}
               {petError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {t("inventory.pet.table.error", { message: petError })}
-                </div>
+                <InlineAlert tone="error" message={t("inventory.pet.table.error", { message: petError }) as string} />
               )}
               {!petLoading && !petError && petItems.length === 0 && (
-                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  {t("inventory.pet.table.empty")}
-                </div>
+                <EmptyState title={t("inventory.pet.table.empty") as string} />
               )}
               {!petLoading && !petError && petItems.length > 0 && (
                 <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -1168,9 +1183,13 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                               {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
                             </td>
                             <td className="px-3 py-2">
-                              <div className="flex flex-col text-xs text-gray-600">
-                                <span>{t(`inventory.status.expiry.${expiry}`)}</span>
-                                <span>{t(`inventory.status.restock.${restock}`)}</span>
+                              <div className="flex flex-col gap-1">
+                                <StatusBadge tone={expiryTone(expiry)}>
+                                  {t(`inventory.status.expiry.${expiry}`)}
+                                </StatusBadge>
+                                <StatusBadge tone={restockTone(restock)}>
+                                  {t(`inventory.status.restock.${restock}`)}
+                                </StatusBadge>
                               </div>
                             </td>
                             <td className="px-3 py-2">
@@ -1217,17 +1236,17 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
         <p className="mt-1 text-sm text-gray-500">{t("inventory.events.subtitle")}</p>
         <div className="mt-4">
           {eventsError && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {t("errors.loadEvents", { message: eventsError })}
-            </div>
+            <InlineAlert
+              tone="error"
+              message={t("errors.loadEvents", { message: eventsError }) as string}
+              className="mb-3"
+            />
           )}
           {eventsLoading && (
-            <div className="text-xs text-gray-500">{t("app.loading")}</div>
+            <InlineAlert tone="info" message={t("app.loading") as string} />
           )}
           {!eventsLoading && events.length === 0 && (
-            <div className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-500">
-              {t("inventory.events.empty")}
-            </div>
+            <EmptyState title={t("inventory.events.empty") as string} />
           )}
           {events.length > 0 && (
             <div className="space-y-2">

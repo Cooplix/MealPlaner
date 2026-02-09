@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 
 import AutocompleteInput from "../../components/AutocompleteInput";
+import { EmptyState } from "../../components/EmptyState";
+import { SectionHeader } from "../../components/SectionHeader";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
@@ -216,6 +218,7 @@ export function DishesPage({
 
   return (
     <div className="space-y-6">
+      <SectionHeader title={t("tabs.dishes") as string} titleAs="h1" />
       <div className="flex items-center gap-2">
         <button
           className="px-3 py-2 rounded-xl bg-gray-900 text-white"
@@ -280,91 +283,94 @@ export function DishesPage({
         />
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sortedDishes.map((dish) => {
-          const notes = dish.notes?.trim() ?? "";
-          const hasLongNotes = notes.length > NOTES_PREVIEW_LIMIT;
-          const notesPreview = hasLongNotes ? `${notes.slice(0, NOTES_PREVIEW_LIMIT).trim()}…` : notes;
-          const sortedIngredients = sortDishIngredients(dish.ingredients);
-          const visibleIngredients = sortedIngredients.slice(0, INGREDIENT_PREVIEW_LIMIT);
-          const remainingIngredients = Math.max(0, dish.ingredients.length - visibleIngredients.length);
-          const showMore = hasLongNotes || remainingIngredients > 0;
+      {sortedDishes.length ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedDishes.map((dish) => {
+            const notes = dish.notes?.trim() ?? "";
+            const hasLongNotes = notes.length > NOTES_PREVIEW_LIMIT;
+            const notesPreview = hasLongNotes ? `${notes.slice(0, NOTES_PREVIEW_LIMIT).trim()}…` : notes;
+            const sortedIngredients = sortDishIngredients(dish.ingredients);
+            const visibleIngredients = sortedIngredients.slice(0, INGREDIENT_PREVIEW_LIMIT);
+            const remainingIngredients = Math.max(0, dish.ingredients.length - visibleIngredients.length);
+            const showMore = hasLongNotes || remainingIngredients > 0;
 
-          return (
-            <div
-              key={dish.id}
-              className="rounded-2xl border bg-white p-4 shadow-sm flex flex-col h-[360px]"
-            >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {dish.name || t("dishes.untitled")}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  {t(MEAL_LABEL_KEYS[dish.meal])}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {t("dishes.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
-                </p>
-                {(dish.createdByName || dish.createdBy) && (
-                  <p className="text-xs text-gray-400">
-                    Added by {dish.createdByName ?? dish.createdBy}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  className="rounded-xl border px-3 py-2 text-sm"
-                  onClick={() => setEditing(dish)}
-                >
-                  {t("dishes.edit")}
-                </button>
-                <button
-                  className="rounded-xl border px-3 py-2 text-sm"
-                  onClick={() => removeDish(dish.id)}
-                  disabled={busyId === dish.id}
-                >
-                  {t("dishes.delete")}
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 flex-1 space-y-2 overflow-hidden">
-              <ul className="text-sm list-disc list-inside text-gray-700 space-y-1">
-                {visibleIngredients.map((ingredient) => (
-                <li key={ingredient.id}>
-                  {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
-                </li>
-              ))}
-              </ul>
-              {remainingIngredients > 0 && (
-                <div className="text-xs text-gray-400">
-                  {t("dishes.moreIngredients", { count: remainingIngredients })}
+            return (
+              <div
+                key={dish.id}
+                className="rounded-2xl border bg-white p-4 shadow-sm flex flex-col h-[360px]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {dish.name || t("dishes.untitled")}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {t(MEAL_LABEL_KEYS[dish.meal])}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t("dishes.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
+                    </p>
+                    {(dish.createdByName || dish.createdBy) && (
+                      <p className="text-xs text-gray-400">
+                        Added by {dish.createdByName ?? dish.createdBy}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="rounded-xl border px-3 py-2 text-sm"
+                      onClick={() => setEditing(dish)}
+                    >
+                      {t("dishes.edit")}
+                    </button>
+                    <button
+                      className="rounded-xl border px-3 py-2 text-sm"
+                      onClick={() => removeDish(dish.id)}
+                      disabled={busyId === dish.id}
+                    >
+                      {t("dishes.delete")}
+                    </button>
+                  </div>
                 </div>
-              )}
-              {notes && (
-                <p className="text-sm text-gray-500 whitespace-pre-wrap">{notesPreview}</p>
-              )}
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              {usedDishIds.has(dish.id) && (
-                <div className="inline-block text-xs px-3 py-1 rounded bg-gray-100">
-                  {t("dishes.inCalendar")}
+                <div className="mt-3 flex-1 space-y-2 overflow-hidden">
+                  <ul className="text-sm list-disc list-inside text-gray-700 space-y-1">
+                    {visibleIngredients.map((ingredient) => (
+                      <li key={ingredient.id}>
+                        {ingredientDisplayName(ingredient)} — {ingredient.qty} {formatUnit(ingredient.unit)}
+                      </li>
+                    ))}
+                  </ul>
+                  {remainingIngredients > 0 && (
+                    <div className="text-xs text-gray-400">
+                      {t("dishes.moreIngredients", { count: remainingIngredients })}
+                    </div>
+                  )}
+                  {notes && (
+                    <p className="text-sm text-gray-500 whitespace-pre-wrap">{notesPreview}</p>
+                  )}
                 </div>
-              )}
-              {showMore && (
-                <button
-                  className="text-xs font-semibold text-gray-700 hover:text-gray-900"
-                  onClick={() => openDishDetails(dish)}
-                >
-                  {t("dishes.showMore")}
-                </button>
-              )}
-            </div>
-          </div>
-          );
-        })}
-        {!sortedDishes.length && <div className="text-gray-500">{t("dishes.empty")}</div>}
-      </div>
+                <div className="mt-3 flex items-center justify-between">
+                  {usedDishIds.has(dish.id) && (
+                    <div className="inline-block text-xs px-3 py-1 rounded bg-gray-100">
+                      {t("dishes.inCalendar")}
+                    </div>
+                  )}
+                  {showMore && (
+                    <button
+                      className="text-xs font-semibold text-gray-700 hover:text-gray-900"
+                      onClick={() => openDishDetails(dish)}
+                    >
+                      {t("dishes.showMore")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState title={t("dishes.empty") as string} />
+      )}
 
       {detailDish && (
         <div
