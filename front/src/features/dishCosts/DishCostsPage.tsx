@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
+import { InfoCard } from "../../components/InfoCard";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../api";
@@ -162,6 +163,25 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
 
   const averageFilteredCost = filteredDishes.length ? totalFilteredCost / filteredDishes.length : 0;
 
+  const mostExpensive = useMemo(() => {
+    if (!filteredDishes.length) return null;
+    const best = filteredDishes.reduce((best, entry) => (entry.totalCost > best.totalCost ? entry : best), filteredDishes[0]);
+    const dish = dishMap.get(best.dishId);
+    return { cost: best.totalCost, name: dish?.name ?? "—" };
+  }, [filteredDishes, dishMap]);
+
+  const mostMissing = useMemo(() => {
+    const list = filteredDishes.filter((entry) => entry.missingIngredients.length > 0);
+    if (!list.length) return null;
+    const worst = list.reduce(
+      (best, entry) =>
+        entry.missingIngredients.length > best.missingIngredients.length ? entry : best,
+      list[0],
+    );
+    const dish = dishMap.get(worst.dishId);
+    return { missing: worst.missingIngredients.length, name: dish?.name ?? "—" };
+  }, [filteredDishes, dishMap]);
+
   const mealOptions = useMemo(
     () => [
       { value: "all", label: t("dishCosts.filters.meal.all") as string },
@@ -250,28 +270,43 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
 
       <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">{t("dishCosts.summary.heading")}</h2>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <InfoCard
+            label={t("dishCosts.insights.mostExpensive") as string}
+            value={mostExpensive ? currencyFormatter.format(mostExpensive.cost) : "—"}
+            hint={mostExpensive?.name}
+            tone={mostExpensive && mostExpensive.cost > averageFilteredCost * 2 ? "warn" : "neutral"}
+          />
+          <InfoCard
+            label={t("dishCosts.insights.mostMissing") as string}
+            value={mostMissing ? `${mostMissing.missing}` : "—"}
+            hint={mostMissing?.name}
+            tone={mostMissing ? "warn" : "neutral"}
+          />
+        </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.dishesTracked") as string}
             value={`${filteredDishes.length}/${dishes.length}`}
             tooltip={t("dishCosts.summary.dishesTrackedHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.averageCost") as string}
             value={filteredDishes.length ? currencyFormatter.format(averageFilteredCost) : "—"}
             tooltip={t("dishCosts.summary.averageCostHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.totalCost") as string}
             value={currencyFormatter.format(totalFilteredCost)}
             tooltip={t("dishCosts.summary.totalCostHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.missingData") as string}
             value={`${costStats.missingCount}`}
             tooltip={t("dishCosts.summary.missingDataHint") as string}
+            tone={costStats.missingCount > 0 ? "warn" : "neutral"}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.averageSpendPerDish") as string}
             value={
               filteredDishes.length
@@ -280,7 +315,7 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
             }
             tooltip={t("dishCosts.summary.averageSpendPerDishHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.costShare") as string}
             value={
               costStats.totalSpent
@@ -294,7 +329,7 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
             }
             tooltip={t("dishCosts.summary.costShareHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("dishCosts.summary.avgCalories") as string}
             value={
               filteredDishes.length
@@ -351,21 +386,6 @@ export function DishCostsPage({ dishes, purchases, ingredients, plans }: DishCos
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-interface SummaryCardProps {
-  label: string;
-  value: string;
-  tooltip?: string;
-}
-
-function SummaryCard({ label, value, tooltip }: SummaryCardProps) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3" title={tooltip}>
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-gray-900">{value}</div>
     </div>
   );
 }

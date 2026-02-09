@@ -2,27 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
+import { InfoCard } from "../../components/InfoCard";
 import { SectionHeader } from "../../components/SectionHeader";
 import { api } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { CalorieEntry, IngredientOption, PurchaseEntry, SpendingAnalyticsResponse } from "../../types";
 import { getIngredientOptionLabel, getLocalizedIngredientName } from "../../utils/ingredientNames";
 import { computeUnitPrice } from "../../utils/pricing";
-
-interface SummaryCardProps {
-  label: string;
-  value: string;
-  tooltip?: string;
-}
-
-function SummaryCard({ label, value, tooltip }: SummaryCardProps) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3" title={tooltip}>
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-gray-900">{value}</div>
-    </div>
-  );
-}
 
 interface SpendingPageProps {
   ingredients: IngredientOption[];
@@ -148,10 +134,10 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
 
   const totals = analytics?.totals ?? null;
   const allTimeTotals = analytics?.allTime ?? null;
-  const dailyTotals = analytics?.dailyTotals ?? [];
-  const topSpenders = analytics?.topSpenders ?? [];
+  const dailyTotals = useMemo(() => analytics?.dailyTotals ?? [], [analytics]);
+  const topSpenders = useMemo(() => analytics?.topSpenders ?? [], [analytics]);
   const nutritionStats = analytics?.nutrition ?? null;
-  const topCalorieItems = analytics?.topCalories ?? [];
+  const topCalorieItems = useMemo(() => analytics?.topCalories ?? [], [analytics]);
   const totalSpent = totals?.totalSpent ?? 0;
   const hasAnalytics = analytics !== null;
 
@@ -186,6 +172,44 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
     : "—";
 
   const maxDailyTotal = dailyTotals.reduce((max, entry) => Math.max(max, entry.total), 0);
+
+  const spendTrend7d = useMemo(() => {
+    const sorted = dailyTotals.slice().sort((left, right) => left.date.localeCompare(right.date));
+    const last = sorted.slice(-7);
+    const prev = sorted.slice(-14, -7);
+    if (last.length === 0 || prev.length === 0) return null;
+
+    const sumLast = last.reduce((sum, entry) => sum + entry.total, 0);
+    const sumPrev = prev.reduce((sum, entry) => sum + entry.total, 0);
+    if (!(sumPrev > 0)) {
+      return { sumLast, delta: null as string | null, deltaTone: "neutral" as const };
+    }
+
+    const ratio = (sumLast - sumPrev) / sumPrev;
+    const threshold = 0.05;
+    const direction = Math.abs(ratio) < threshold ? "flat" : ratio > 0 ? "up" : "down";
+    const arrow = direction === "up" ? "▲" : direction === "down" ? "▼" : "●";
+    const deltaTone = direction === "up" ? ("warn" as const) : direction === "down" ? ("success" as const) : ("neutral" as const);
+
+    return {
+      sumLast,
+      delta: `${arrow} ${percentFormatter.format(Math.abs(ratio))}`,
+      deltaTone,
+    };
+  }, [dailyTotals, percentFormatter]);
+
+  const biggestDay = useMemo(() => {
+    if (dailyTotals.length === 0) return null;
+    return dailyTotals.reduce((best, entry) => (entry.total > best.total ? entry : best), dailyTotals[0]);
+  }, [dailyTotals]);
+
+  const topProduct = useMemo(() => {
+    if (topSpenders.length === 0) return null;
+    const best = topSpenders.reduce((best, entry) => (entry.total > best.total ? entry : best), topSpenders[0]);
+    const option = ingredientMap.get(best.ingredientKey);
+    const name = option ? getIngredientOptionLabel(option, language) : best.ingredientKey;
+    return { name, total: best.total, share: best.share };
+  }, [topSpenders, ingredientMap, language]);
 
   async function handleReload() {
     if (!onRefresh) return;
@@ -449,61 +473,99 @@ export function SpendingPage({ ingredients, purchases, calorieEntries, onRefresh
           <InlineAlert tone="info" message={t("app.loading") as string} />
         )}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.totalLabel") as string}
             value={hasAnalytics ? currencyFormatter.format(totalSpent) : "—"}
             tooltip={t("spending.summary.totalHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.avgDaily") as string}
             value={totals ? currencyFormatter.format(totals.averageDailySpend ?? 0) : "—"}
             tooltip={t("spending.summary.avgDailyHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.medianDaily") as string}
             value={totals ? currencyFormatter.format(totals.medianDailySpend ?? 0) : "—"}
             tooltip={t("spending.summary.medianDailyHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.daysTracked") as string}
             value={daysTrackedValue}
             tooltip={t("spending.summary.daysTrackedHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.avgPurchase") as string}
             value={averagePerPurchaseValue}
             tooltip={t("spending.summary.avgPurchaseHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.quantity") as string}
             value={normalizedQuantityValue}
             tooltip={t("spending.summary.quantityHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.unitPrice") as string}
             value={averageUnitPriceValue}
             tooltip={t("spending.summary.unitPriceHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.totalAll") as string}
             value={allTimeTotals ? currencyFormatter.format(allTimeTotals.totalSpent ?? 0) : "—"}
             tooltip={t("spending.summary.totalAllHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.caloriesTotal") as string}
             value={totalCaloriesValue}
             tooltip={t("spending.summary.caloriesTotalHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.caloriesAverage") as string}
             value={averageDailyCaloriesValue}
             tooltip={t("spending.summary.caloriesAverageHint") as string}
           />
-          <SummaryCard
+          <InfoCard
             label={t("spending.summary.caloriesPerPurchase") as string}
             value={caloriesPerPurchaseValue}
             tooltip={t("spending.summary.caloriesPerPurchaseHint") as string}
           />
+        </div>
+
+        <div className="pt-2 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900">{t("spending.insights.heading")}</h3>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <InfoCard
+              label={t("spending.insights.trend7d") as string}
+              value={spendTrend7d ? currencyFormatter.format(spendTrend7d.sumLast) : "—"}
+              delta={spendTrend7d?.delta ?? undefined}
+              deltaTone={spendTrend7d?.deltaTone}
+              hint={t("spending.insights.trend7dHint") as string}
+              tone={spendTrend7d?.deltaTone ?? "neutral"}
+            />
+            <InfoCard
+              label={t("spending.insights.biggestDay") as string}
+              value={biggestDay ? currencyFormatter.format(biggestDay.total) : "—"}
+              hint={
+                biggestDay
+                  ? new Date(`${biggestDay.date}T00:00:00`).toLocaleDateString(locale)
+                  : undefined
+              }
+              tone={
+                biggestDay && totals?.averageDailySpend && biggestDay.total > totals.averageDailySpend * 2
+                  ? "warn"
+                  : "neutral"
+              }
+            />
+            <InfoCard
+              label={t("spending.insights.topProduct") as string}
+              value={topProduct?.name ?? "—"}
+              hint={
+                topProduct
+                  ? `${currencyFormatter.format(topProduct.total)} · ${percentFormatter.format(topProduct.share)}`
+                  : undefined
+              }
+              tone={topProduct && topProduct.share >= 0.35 ? "warn" : topProduct ? "info" : "neutral"}
+            />
+          </div>
         </div>
       </section>
 

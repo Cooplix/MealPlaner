@@ -3,6 +3,7 @@ import AutocompleteInput from "../../components/AutocompleteInput";
 import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
 import { InlineAlert } from "../../components/InlineAlert";
+import { InfoCard } from "../../components/InfoCard";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useTranslation } from "../../i18n";
@@ -15,6 +16,13 @@ import type { InventoryEvent, InventoryFilters, InventoryItem, PetFoodItem } fro
 type InventoryTab = "products" | "catFood";
 type InventoryFormMode = "create" | "edit";
 type StatusTone = "success" | "info" | "warn" | "error" | "neutral";
+type InventorySummary = {
+  total: number;
+  expired: number;
+  expiringSoon: number;
+  restock: number;
+  toBuy: number;
+};
 
 type InventoryFormState = {
   ingredientKey: string;
@@ -395,6 +403,41 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     });
     return list;
   }, [items, filters, sortMode, collator]);
+
+  const productsSummary = useMemo<InventorySummary>(() => {
+    const expired = items.reduce((count, item) => count + (getExpiryStatus(item.expiresAt) === "EXPIRED" ? 1 : 0), 0);
+    const expiringSoon = items.reduce((count, item) => {
+      const expiry = getExpiryStatus(item.expiresAt);
+      return count + (expiry === "<=14d" || expiry === "<=30d" ? 1 : 0);
+    }, 0);
+    const restock = items.reduce((count, item) => count + (getRestockStatus(item.quantity, item.minQty) === "RESTOCK" ? 1 : 0), 0);
+    const toBuy = items.reduce((count, item) => count + (getToBuy(item.quantity, item.minQty, item.maxQty) > 0 ? 1 : 0), 0);
+
+    return { total: items.length, expired, expiringSoon, restock, toBuy };
+  }, [items]);
+
+  const petSummary = useMemo<InventorySummary>(() => {
+    const expired = petItems.reduce(
+      (count, item) => count + (getExpiryStatus(item.expiresAt) === "EXPIRED" ? 1 : 0),
+      0,
+    );
+    const expiringSoon = petItems.reduce((count, item) => {
+      const expiry = getExpiryStatus(item.expiresAt);
+      return count + (expiry === "<=14d" || expiry === "<=30d" ? 1 : 0);
+    }, 0);
+    const restock = petItems.reduce(
+      (count, item) => count + (getRestockStatus(item.quantity, item.minQty) === "RESTOCK" ? 1 : 0),
+      0,
+    );
+    const toBuy = petItems.reduce(
+      (count, item) => count + (getToBuy(item.quantity, item.minQty, item.maxQty) > 0 ? 1 : 0),
+      0,
+    );
+
+    return { total: petItems.length, expired, expiringSoon, restock, toBuy };
+  }, [petItems]);
+
+  const activeSummary = activeTab === "products" ? productsSummary : petSummary;
 
   const sortOptions = useMemo(
     () => [
@@ -908,6 +951,29 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
         >
           {t("inventory.tabs.catFood")}
         </button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <InfoCard label={t("inventory.summaryCards.total") as string} value={`${activeSummary.total}`} />
+        <InfoCard
+          label={t("inventory.filters.expired") as string}
+          value={`${activeSummary.expired}`}
+          tone={activeSummary.expired > 0 ? "error" : "neutral"}
+        />
+        <InfoCard
+          label={t("inventory.filters.soon") as string}
+          value={`${activeSummary.expiringSoon}`}
+          tone={activeSummary.expiringSoon > 0 ? "warn" : "neutral"}
+        />
+        <InfoCard
+          label={t("inventory.filters.restock") as string}
+          value={`${activeSummary.restock}`}
+          tone={activeSummary.restock > 0 ? "warn" : "neutral"}
+        />
+        <InfoCard
+          label={t("inventory.table.columns.toBuy") as string}
+          value={`${activeSummary.toBuy}`}
+          tone={activeSummary.toBuy > 0 ? "info" : "neutral"}
+        />
       </div>
       <div className="rounded-2xl border border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] p-6 shadow-sm space-y-4">
         {activeTab === "products" ? (

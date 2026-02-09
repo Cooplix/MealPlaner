@@ -43,6 +43,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
     inventory: {
       title: "Inventory management",
       subtitle: "Track products and cat food in one place.",
+      summaryCards: {
+        total: "Total items",
+      },
       placeholderTitle: "Inventory module is ready for setup.",
       placeholderBody: "We will add the data tables, filters, and actions in the next steps.",
       tabs: {
@@ -600,6 +603,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           unit: "units",
         },
       },
+      insights: {
+        heading: "Highlights",
+        trend7d: "Trend (7 days)",
+        trend7dHint: "Compares the last 7 purchase-days with the previous 7 purchase-days.",
+        biggestDay: "Biggest day",
+        topProduct: "Top product",
+      },
       filters: {
         heading: "Filters",
         start: "From",
@@ -695,6 +705,10 @@ export const translations: Record<Language, Record<string, unknown>> = {
     dishCosts: {
       title: "Dish cost analysis",
       subtitle: "Estimate how much each dish costs based on recent purchases.",
+      insights: {
+        mostExpensive: "Most expensive dish",
+        mostMissing: "Most missing ingredients",
+      },
       filters: {
         heading: "Filters",
         meal: {
@@ -788,6 +802,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
     inventory: {
       title: "Управління запасами",
       subtitle: "Облік продуктів і корму в одному місці.",
+      summaryCards: {
+        total: "Всього позицій",
+      },
       placeholderTitle: "Модуль інвентарю готовий до налаштування.",
       placeholderBody: "Далі додамо таблиці, фільтри та дії.",
       tabs: {
@@ -1345,6 +1362,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           unit: "од.",
         },
       },
+      insights: {
+        heading: "Ключові інсайти",
+        trend7d: "Тренд (7 днів)",
+        trend7dHint: "Порівнює останні 7 днів з покупками з попередніми 7 днями з покупками.",
+        biggestDay: "Найдорожчий день",
+        topProduct: "Топ продукт",
+      },
       filters: {
         heading: "Фільтри",
         start: "Від",
@@ -1440,6 +1464,10 @@ export const translations: Record<Language, Record<string, unknown>> = {
     dishCosts: {
       title: "Собівартість страв",
       subtitle: "Оціни, скільки реально коштує страва з урахуванням покупок.",
+      insights: {
+        mostExpensive: "Найдорожча страва",
+        mostMissing: "Найбільше відсутніх інгредієнтів",
+      },
       filters: {
         heading: "Фільтри",
         meal: {
@@ -1533,6 +1561,9 @@ export const translations: Record<Language, Record<string, unknown>> = {
     inventory: {
       title: "Zarządzanie zapasami",
       subtitle: "Produkty i karma w jednym miejscu.",
+      summaryCards: {
+        total: "Łącznie pozycji",
+      },
       placeholderTitle: "Moduł zapasów jest gotowy do konfiguracji.",
       placeholderBody: "W kolejnych krokach dodamy tabele, filtry i akcje.",
       tabs: {
@@ -2090,6 +2121,13 @@ export const translations: Record<Language, Record<string, unknown>> = {
           unit: "jedn.",
         },
       },
+      insights: {
+        heading: "Najważniejsze",
+        trend7d: "Trend (7 dni)",
+        trend7dHint: "Porównuje ostatnie 7 dni zakupów z poprzednimi 7 dniami zakupów.",
+        biggestDay: "Najdroższy dzień",
+        topProduct: "Top produkt",
+      },
       filters: {
         heading: "Filtry",
         start: "Od",
@@ -2185,6 +2223,10 @@ export const translations: Record<Language, Record<string, unknown>> = {
     dishCosts: {
       title: "Koszt potraw",
       subtitle: "Oszacuj koszt potraw na podstawie historii zakupów.",
+      insights: {
+        mostExpensive: "Najdroższe danie",
+        mostMissing: "Najwięcej brakujących składników",
+      },
       filters: {
         heading: "Filtry",
         meal: {
