@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import AutocompleteInput from "../../components/AutocompleteInput";
 import { DataTableToolbar } from "../../components/DataTableToolbar";
 import { EmptyState } from "../../components/EmptyState";
@@ -6,6 +6,7 @@ import { InlineAlert } from "../../components/InlineAlert";
 import { InfoCard } from "../../components/InfoCard";
 import { SectionHeader } from "../../components/SectionHeader";
 import { StatusBadge } from "../../components/StatusBadge";
+import { useDialog } from "../../hooks/useDialog";
 import { useTranslation } from "../../i18n";
 import type { IngredientOption } from "../../types";
 import { findIngredientOption, getIngredientOptionLabel } from "../../utils/ingredientNames";
@@ -164,6 +165,20 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
     location: "all",
     status: "all",
   });
+
+  const productFormTitleId = useId();
+  const productFormSubtitleId = useId();
+  const consumeTitleId = useId();
+  const consumeSubtitleId = useId();
+  const petFormTitleId = useId();
+  const petFormSubtitleId = useId();
+  const petConsumeTitleId = useId();
+  const petConsumeSubtitleId = useId();
+
+  const productFormDialogRef = useDialog(formOpen, closeForm);
+  const consumeDialogRef = useDialog(consumeOpen, closeConsume);
+  const petFormDialogRef = useDialog(petFormOpen, closePetForm);
+  const petConsumeDialogRef = useDialog(petConsumeOpen, closePetConsume);
   const [sortMode, setSortMode] = useState("nameAsc");
   const [petSortMode, setPetSortMode] = useState("nameAsc");
   const [visibleProductsCount, setVisibleProductsCount] = useState(DEFAULT_VISIBLE_PRODUCTS);
@@ -1356,15 +1371,31 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       </div>
       {formOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between">
+          <div
+            ref={productFormDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`inventory-form-title-${productFormTitleId}`}
+            aria-describedby={`inventory-form-subtitle-${productFormSubtitleId}`}
+            tabIndex={-1}
+            className="w-full max-w-2xl max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  id={`inventory-form-title-${productFormTitleId}`}
+                  className="text-lg font-semibold text-gray-900"
+                >
                   {formMode === "create"
                     ? t("inventory.form.createTitle")
                     : t("inventory.form.editTitle")}
                 </h2>
-                <p className="text-sm text-gray-500">{t("inventory.form.subtitle")}</p>
+                <p
+                  id={`inventory-form-subtitle-${productFormSubtitleId}`}
+                  className="text-sm text-gray-500"
+                >
+                  {t("inventory.form.subtitle")}
+                </p>
               </div>
               <button
                 type="button"
@@ -1375,125 +1406,129 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 ✕
               </button>
             </div>
-            <form className="mt-4 space-y-4" onSubmit={submitForm}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.name")}</label>
-                  <AutocompleteInput
-                    containerClassName="mt-1"
-                    inputClassName="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.name}
-                    onChange={(value) => handleNameChange(value)}
-                    options={buildIngredientSuggestions(formData.name)}
-                    ariaLabel={t("inventory.form.fields.name") as string}
-                  />
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitForm}>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.name")}</label>
+                    <AutocompleteInput
+                      containerClassName="mt-1"
+                      inputClassName="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.name}
+                      onChange={(value) => handleNameChange(value)}
+                      options={buildIngredientSuggestions(formData.name)}
+                      ariaLabel={t("inventory.form.fields.name") as string}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.baseName")}</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.baseName}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, baseName: event.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.category")}</label>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.category}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
+                    >
+                      <option value="">{t("inventory.table.unknown")}</option>
+                      {formCategoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.location")}</label>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.location}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, location: event.target.value }))}
+                    >
+                      <option value="">{t("inventory.table.unknown")}</option>
+                      {formLocationOptions.map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.quantity")}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.quantity}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, quantity: event.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.unit")}</label>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.unit}
+                      onChange={(event) => handleUnitChange(event.target.value)}
+                    >
+                      <option value="">{t("inventory.table.unknown")}</option>
+                      {formUnitOptions.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {formatUnit(unit)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.minQty")}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.minQty}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, minQty: event.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.maxQty")}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.maxQty}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, maxQty: event.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.expiresAt")}</label>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={formData.expiresAt}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-gray-600">{t("inventory.form.fields.notes")}</label>
+                    <textarea
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      rows={3}
+                      value={formData.notes}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, notes: event.target.value }))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.baseName")}</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.baseName}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, baseName: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.category")}</label>
-                  <select
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.category}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
-                  >
-                    <option value="">{t("inventory.table.unknown")}</option>
-                    {formCategoryOptions.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.location")}</label>
-                  <select
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.location}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, location: event.target.value }))}
-                  >
-                    <option value="">{t("inventory.table.unknown")}</option>
-                    {formLocationOptions.map((location) => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.quantity")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.quantity}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, quantity: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.unit")}</label>
-                  <select
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.unit}
-                    onChange={(event) => handleUnitChange(event.target.value)}
-                  >
-                    <option value="">{t("inventory.table.unknown")}</option>
-                    {formUnitOptions.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {formatUnit(unit)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.minQty")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.minQty}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, minQty: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.maxQty")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.maxQty}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, maxQty: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.expiresAt")}</label>
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={formData.expiresAt}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, expiresAt: event.target.value }))}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-gray-600">{t("inventory.form.fields.notes")}</label>
-                  <textarea
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    rows={3}
-                    value={formData.notes}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, notes: event.target.value }))}
-                  />
-                </div>
+
+                {formError && (
+                  <InlineAlert tone="error" message={formError} />
+                )}
               </div>
-              {formError && (
-                <InlineAlert tone="error" message={formError} />
-              )}
-              <div className="flex flex-wrap justify-end gap-2">
+
+              <div className="border-t px-6 py-4 flex flex-wrap justify-end gap-2 bg-white">
                 <button
                   type="button"
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
@@ -1519,13 +1554,29 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       )}
       {consumeOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between">
+          <div
+            ref={consumeDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`inventory-consume-title-${consumeTitleId}`}
+            aria-describedby={`inventory-consume-subtitle-${consumeSubtitleId}`}
+            tabIndex={-1}
+            className="w-full max-w-md max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  id={`inventory-consume-title-${consumeTitleId}`}
+                  className="text-lg font-semibold text-gray-900"
+                >
                   {t("inventory.consume.title")}
                 </h2>
-                <p className="text-sm text-gray-500">{t("inventory.consume.subtitle")}</p>
+                <p
+                  id={`inventory-consume-subtitle-${consumeSubtitleId}`}
+                  className="text-sm text-gray-500"
+                >
+                  {t("inventory.consume.subtitle")}
+                </p>
               </div>
               <button
                 type="button"
@@ -1536,7 +1587,9 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 ✕
               </button>
             </div>
-              <form className="mt-4 space-y-4" onSubmit={submitConsume}>
+
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitConsume}>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <div>
                   <label className="text-sm text-gray-600">{t("inventory.consume.amount")}</label>
                   <input
@@ -1550,37 +1603,55 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                   />
                 </div>
                 {consumeError && <InlineAlert tone="error" message={consumeError} />}
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                    onClick={closeConsume}
-                  >
-                    {t("inventory.consume.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
-                    disabled={consumeSubmitting}
-                  >
-                    {consumeSubmitting ? t("inventory.consume.saving") : t("inventory.consume.confirm")}
-                  </button>
-                </div>
-              </form>
+              </div>
+
+              <div className="border-t px-6 py-4 flex flex-wrap justify-end gap-2 bg-white">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  onClick={closeConsume}
+                >
+                  {t("inventory.consume.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-70"
+                  disabled={consumeSubmitting}
+                >
+                  {consumeSubmitting ? t("inventory.consume.saving") : t("inventory.consume.confirm")}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
       {petFormOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between">
+          <div
+            ref={petFormDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`inventory-pet-form-title-${petFormTitleId}`}
+            aria-describedby={`inventory-pet-form-subtitle-${petFormSubtitleId}`}
+            tabIndex={-1}
+            className="w-full max-w-2xl max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  id={`inventory-pet-form-title-${petFormTitleId}`}
+                  className="text-lg font-semibold text-gray-900"
+                >
                   {petFormMode === "create"
                     ? t("inventory.pet.form.createTitle")
                     : t("inventory.pet.form.editTitle")}
                 </h2>
-                <p className="text-sm text-gray-500">{t("inventory.pet.form.subtitle")}</p>
+                <p
+                  id={`inventory-pet-form-subtitle-${petFormSubtitleId}`}
+                  className="text-sm text-gray-500"
+                >
+                  {t("inventory.pet.form.subtitle")}
+                </p>
               </div>
               <button
                 type="button"
@@ -1591,162 +1662,165 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 ✕
               </button>
             </div>
-            <form className="mt-4 space-y-4" onSubmit={submitPetForm}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.manufacturer")}
-                  </label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.manufacturer}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, manufacturer: event.target.value }))
-                    }
-                  />
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitPetForm}>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.manufacturer")}
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.manufacturer}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, manufacturer: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.productName")}
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.productName}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, productName: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.foodType")}
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.foodType}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, foodType: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.packageType")}
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.packageType}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, packageType: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.weight")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.weight}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, weight: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.weightUnit")}
+                    </label>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.weightUnit}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, weightUnit: event.target.value }))
+                      }
+                    >
+                      <option value="">{t("inventory.table.unknown")}</option>
+                      {petUnitOptions.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {formatUnit(unit)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.quantity")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.quantity}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, quantity: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.minQty")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.minQty}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, minQty: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.maxQty")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.maxQty}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, maxQty: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.expiresAt")}
+                    </label>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      value={petFormData.expiresAt}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, expiresAt: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-gray-600">
+                      {t("inventory.pet.form.fields.notes")}
+                    </label>
+                    <textarea
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      rows={3}
+                      value={petFormData.notes}
+                      onChange={(event) =>
+                        setPetFormData((prev) => ({ ...prev, notes: event.target.value }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.productName")}
-                  </label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.productName}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, productName: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.foodType")}
-                  </label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.foodType}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, foodType: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.packageType")}
-                  </label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.packageType}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, packageType: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.weight")}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.weight}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, weight: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.weightUnit")}
-                  </label>
-                  <select
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.weightUnit}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, weightUnit: event.target.value }))
-                    }
-                  >
-                    <option value="">{t("inventory.table.unknown")}</option>
-                    {petUnitOptions.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {formatUnit(unit)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.quantity")}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.quantity}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, quantity: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.minQty")}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.minQty}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, minQty: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.maxQty")}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.maxQty}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, maxQty: event.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.expiresAt")}
-                  </label>
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    value={petFormData.expiresAt}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, expiresAt: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-gray-600">
-                    {t("inventory.pet.form.fields.notes")}
-                  </label>
-                  <textarea
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    rows={3}
-                    value={petFormData.notes}
-                    onChange={(event) =>
-                      setPetFormData((prev) => ({ ...prev, notes: event.target.value }))
-                    }
-                  />
-                </div>
+                {petFormError && (
+                  <InlineAlert tone="error" message={petFormError} />
+                )}
               </div>
-              {petFormError && (
-                <InlineAlert tone="error" message={petFormError} />
-              )}
-              <div className="flex flex-wrap justify-end gap-2">
+
+              <div className="border-t px-6 py-4 flex flex-wrap justify-end gap-2 bg-white">
                 <button
                   type="button"
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
@@ -1772,13 +1846,29 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
       )}
       {petConsumeOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between">
+          <div
+            ref={petConsumeDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`inventory-pet-consume-title-${petConsumeTitleId}`}
+            aria-describedby={`inventory-pet-consume-subtitle-${petConsumeSubtitleId}`}
+            tabIndex={-1}
+            className="w-full max-w-md max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  id={`inventory-pet-consume-title-${petConsumeTitleId}`}
+                  className="text-lg font-semibold text-gray-900"
+                >
                   {t("inventory.pet.consume.title")}
                 </h2>
-                <p className="text-sm text-gray-500">{t("inventory.pet.consume.subtitle")}</p>
+                <p
+                  id={`inventory-pet-consume-subtitle-${petConsumeSubtitleId}`}
+                  className="text-sm text-gray-500"
+                >
+                  {t("inventory.pet.consume.subtitle")}
+                </p>
               </div>
               <button
                 type="button"
@@ -1789,25 +1879,27 @@ export function InventoryPage({ ingredientOptions, categories, locations, units 
                 ✕
               </button>
             </div>
-            <form className="mt-4 space-y-4" onSubmit={submitPetConsume}>
-              <div>
-                <label className="text-sm text-gray-600">
-                  {t("inventory.pet.consume.amount")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={petConsumeForm.amount}
-                  onChange={(event) =>
-                    setPetConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
-                  }
-                />
+
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitPetConsume}>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600">
+                    {t("inventory.pet.consume.amount")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    value={petConsumeForm.amount}
+                    onChange={(event) =>
+                      setPetConsumeForm((prev) => ({ ...prev, amount: event.target.value }))
+                    }
+                  />
+                </div>
+                {petConsumeError && <InlineAlert tone="error" message={petConsumeError} />}
               </div>
-              {petConsumeError && (
-                <InlineAlert tone="error" message={petConsumeError} />
-              )}
-              <div className="flex flex-wrap justify-end gap-2">
+
+              <div className="border-t px-6 py-4 flex flex-wrap justify-end gap-2 bg-white">
                 <button
                   type="button"
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"

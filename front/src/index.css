@@ -17,6 +17,7 @@
   --ui-border: #e5e7eb;
   --ui-muted: #6b7280;
   --ui-title: #111827;
+  --ui-focus-ring: #2563eb;
 
   --ui-success-bg: #ecfdf3;
   --ui-success-border: #a7f3d0;
@@ -42,4 +43,18 @@
 body {
   min-height: 100vh;
   background-color: transparent;
+}
+
+:where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
 }

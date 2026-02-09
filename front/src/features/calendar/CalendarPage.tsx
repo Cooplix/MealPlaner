@@ -255,18 +255,20 @@ export function CalendarPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <button className="px-3 py-2 rounded-xl border" onClick={() => setWeekStart(addDays(weekStart, -7))}>
-          {t("calendar.previous")}
-        </button>
-        <div className="px-3 py-2 rounded-xl border bg-white">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-2 rounded-xl border" onClick={() => setWeekStart(addDays(weekStart, -7))}>
+            {t("calendar.previous")}
+          </button>
+          <button className="px-3 py-2 rounded-xl border" onClick={() => setWeekStart(addDays(weekStart, 7))}>
+            {t("calendar.next")}
+          </button>
+        </div>
+        <div className="w-full sm:w-auto px-3 py-2 rounded-xl border bg-white text-sm">
           {t("calendar.weekRange", { start: toDateISO(weekDays[0]), end: toDateISO(weekDays[6]) })}
         </div>
-        <button className="px-3 py-2 rounded-xl border" onClick={() => setWeekStart(addDays(weekStart, 7))}>
-          {t("calendar.next")}
-        </button>
         <button
-          className="ml-auto px-3 py-2 rounded-xl border"
+          className="w-full sm:w-auto sm:ml-auto px-3 py-2 rounded-xl border"
           onClick={() => setWeekStart(startOfWeek(new Date()))}
         >
           {t("calendar.today")}

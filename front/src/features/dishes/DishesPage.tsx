@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import AutocompleteInput from "../../components/AutocompleteInput";
 import { EmptyState } from "../../components/EmptyState";
@@ -7,6 +7,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { MEASUREMENT_UNITS } from "../../constants/measurementUnits";
 import { useTranslation } from "../../i18n";
+import { useDialog } from "../../hooks/useDialog";
 import type { DayPlan, Dish, Ingredient, IngredientOption, MealSlot } from "../../types";
 import { findIngredientOption } from "../../utils/ingredientNames";
 import { uid } from "../../utils/id";
@@ -54,6 +55,10 @@ export function DishesPage({
   const [mealFilter, setMealFilter] = useState<MealSlot | "all">("all");
   const [sortMode, setSortMode] = useState("nameAsc");
   const { t, language } = useTranslation();
+  const detailTitleId = useId();
+  const detailSubtitleId = useId();
+  const closeDishDetails = useCallback(() => setDetailDish(null), []);
+  const detailDialogRef = useDialog(Boolean(detailDish), closeDishDetails);
   const collator = useMemo(
     () => new Intl.Collator(language, { sensitivity: "base" }),
     [language],
@@ -220,56 +225,61 @@ export function DishesPage({
   return (
     <div className="space-y-6">
       <SectionHeader title={t("tabs.dishes") as string} titleAs="h1" />
-      <div className="flex items-center gap-2">
-        <button
-          className="px-3 py-2 rounded-xl bg-gray-900 text-white"
-          onClick={() =>
-            setEditing({
-              id: uid("dish"),
-              name: "",
-              meal: mealFilter === "all" ? "lunch" : mealFilter,
-              ingredients: [],
-              calories: 0,
-            })
-          }
-        >
-          {t("dishes.add")}
-        </button>
-        <input
-          className="flex-1 px-3 py-2 rounded-xl border"
-          placeholder={t("dishes.searchPlaceholder")}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <span>{t("dishes.filterLabel")}:</span>
-          <select
-            className="rounded-xl border px-3 py-2"
-            value={mealFilter}
-            onChange={(event) => setMealFilter(event.target.value as MealSlot | "all")}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-1">
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl bg-gray-900 text-white"
+            onClick={() =>
+              setEditing({
+                id: uid("dish"),
+                name: "",
+                meal: mealFilter === "all" ? "lunch" : mealFilter,
+                ingredients: [],
+                calories: 0,
+              })
+            }
           >
-            <option value="all">{t("dishes.filterAll")}</option>
-            {MEAL_ORDER.map((slot) => (
-              <option key={slot} value={slot}>
-                {t(MEAL_LABEL_KEYS[slot])}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <span>{t("dishes.sort.label")}:</span>
-          <select
-            className="rounded-xl border px-3 py-2"
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value)}
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            {t("dishes.add")}
+          </button>
+          <input
+            className="w-full sm:flex-1 px-3 py-2 rounded-xl border"
+            placeholder={t("dishes.searchPlaceholder")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="flex items-center gap-2 text-sm text-gray-600 w-full sm:w-auto">
+            <span className="whitespace-nowrap">{t("dishes.filterLabel")}:</span>
+            <select
+              className="flex-1 rounded-xl border px-3 py-2"
+              value={mealFilter}
+              onChange={(event) => setMealFilter(event.target.value as MealSlot | "all")}
+            >
+              <option value="all">{t("dishes.filterAll")}</option>
+              {MEAL_ORDER.map((slot) => (
+                <option key={slot} value={slot}>
+                  {t(MEAL_LABEL_KEYS[slot])}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-600 w-full sm:w-auto">
+            <span className="whitespace-nowrap">{t("dishes.sort.label")}:</span>
+            <select
+              className="flex-1 rounded-xl border px-3 py-2"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value)}
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {editing && (
@@ -380,22 +390,38 @@ export function DishesPage({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              setDetailDish(null);
+              closeDishDetails();
             }
           }}
         >
-          <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl bg-white p-6 shadow-xl flex flex-col">
+          <div
+            ref={detailDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`dishes-details-title-${detailTitleId}`}
+            aria-describedby={`dishes-details-subtitle-${detailSubtitleId}`}
+            tabIndex={-1}
+            className="w-full max-w-2xl max-h-[85vh] rounded-2xl bg-white p-6 shadow-xl flex flex-col"
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2
+                  id={`dishes-details-title-${detailTitleId}`}
+                  className="text-lg font-semibold text-gray-900"
+                >
                   {detailDish.name || t("dishes.untitled")}
                 </h2>
-                <p className="text-sm text-gray-500">{t("dishes.detailsTitle")}</p>
+                <p
+                  id={`dishes-details-subtitle-${detailSubtitleId}`}
+                  className="text-sm text-gray-500"
+                >
+                  {t("dishes.detailsTitle")}
+                </p>
               </div>
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-600"
-                onClick={() => setDetailDish(null)}
+                onClick={closeDishDetails}
                 aria-label={t("dishes.detailsClose") as string}
               >
                 ✕
@@ -429,7 +455,7 @@ export function DishesPage({
               <button
                 type="button"
                 className="rounded-xl border px-3 py-2 text-sm"
-                onClick={() => setDetailDish(null)}
+                onClick={closeDishDetails}
               >
                 {t("dishes.detailsClose")}
               </button>
@@ -706,9 +732,9 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
             <button className="text-sm px-3 py-1 rounded-lg border" onClick={addIngredient}>
               {t("dishes.editor.addNew")}
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
-                className="rounded-xl border px-3 py-2 text-sm"
+                className="w-full sm:w-auto rounded-xl border px-3 py-2 text-sm"
                 value={existingChoice}
                 onChange={(event) => setExistingChoice(event.target.value)}
                 disabled={!availableExisting.length}
@@ -721,7 +747,7 @@ function DishEditor({ dish, onSave, onCancel, saving, ingredientOptions, unitOpt
                 ))}
               </select>
               <button
-                className="text-sm px-3 py-1 rounded-lg border"
+                className="w-full sm:w-auto text-sm px-3 py-1 rounded-lg border"
                 onClick={addExistingIngredient}
                 disabled={!existingChoice}
               >
