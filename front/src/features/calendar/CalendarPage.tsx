@@ -1,10 +1,35 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { InlineAlert } from "../../components/InlineAlert";
+import { StatusBadge } from "../../components/StatusBadge";
 import { MEAL_LABEL_KEYS, MEAL_ORDER } from "../../constants/meals";
 import { useTranslation } from "../../i18n";
 import type { DayPlan, Dish, IngredientOption, MealSlot } from "../../types";
 import { addDays, startOfWeek, toDateISO } from "../../utils/dates";
 import { getLocalizedIngredientName } from "../../utils/ingredientNames";
+import { inventoryApi } from "../inventory/api";
+import type { InventoryItem } from "../inventory/types";
+
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function nameUnitKey(name: string, unit: string): string {
+  return `${normalizeKey(name)}__${normalizeKey(unit)}`;
+}
+
+type RecommendationScoreLevel = "high" | "medium" | "low";
+
+function scoreTone(level: RecommendationScoreLevel): "success" | "info" | "neutral" {
+  switch (level) {
+    case "high":
+      return "success";
+    case "medium":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
 
 interface CalendarPageProps {
   dishes: Dish[];
@@ -23,6 +48,9 @@ export function CalendarPage({
 }: CalendarPageProps) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [busyDate, setBusyDate] = useState<string | null>(null);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
   const { t, language } = useTranslation();
   const formatUnit = (value: string): string => {
     const label = t(`units.${value}`);
@@ -30,11 +58,37 @@ export function CalendarPage({
   };
 
   const locale = language === "uk" ? "uk-UA" : language === "pl" ? "pl-PL" : "en-US";
+  const weekStartISO = useMemo(() => toDateISO(weekStart), [weekStart]);
+  const dishById = useMemo(() => new Map(dishes.map((dish) => [dish.id, dish])), [dishes]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [weekStart],
   );
+
+  useEffect(() => {
+    let ignore = false;
+    setInventoryLoading(true);
+    setInventoryError(null);
+    inventoryApi
+      .listItems()
+      .then((data) => {
+        if (!ignore) setInventoryItems(data);
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : String(err ?? "unknown error");
+          setInventoryError(message);
+          setInventoryItems([]);
+        }
+      })
+      .finally(() => {
+        if (!ignore) setInventoryLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   function planFor(dateISO: string): DayPlan {
     const found = plans.find((plan) => plan.dateISO === dateISO);
@@ -93,6 +147,36 @@ export function CalendarPage({
     return names;
   }, [weekDays, plans, dishes]);
 
+  const lastUsedBeforeWeekStart = useMemo(() => {
+    const map = new Map<string, string>();
+    plans.forEach((plan) => {
+      if (!plan?.dateISO || plan.dateISO >= weekStartISO) return;
+      Object.values(plan.slots).forEach((dishId) => {
+        if (!dishId) return;
+        const existing = map.get(dishId);
+        if (!existing || plan.dateISO > existing) {
+          map.set(dishId, plan.dateISO);
+        }
+      });
+    });
+    return map;
+  }, [plans, weekStartISO]);
+
+  const inStockLookup = useMemo(() => {
+    const byKey = new Set<string>();
+    const byNameUnit = new Set<string>();
+    inventoryItems.forEach((item) => {
+      if (!(item.quantity > 0)) return;
+      if (item.ingredientKey && item.ingredientKey.trim()) {
+        byKey.add(normalizeKey(item.ingredientKey));
+      }
+      if (item.name && item.unit) {
+        byNameUnit.add(nameUnitKey(item.name, item.unit));
+      }
+    });
+    return { byKey, byNameUnit };
+  }, [inventoryItems]);
+
   const recommendations = useMemo(() => {
     const scored = dishes
       .filter((dish) => !weekDishIds.has(dish.id))
@@ -101,11 +185,54 @@ export function CalendarPage({
           (total, ingredient) => total + (ingredientPool.has(ingredient.name.toLowerCase()) ? 1 : 0),
           0,
         );
-        return { dish, overlap };
+        const stockCount = dish.ingredients.reduce((total, ingredient) => {
+          if (ingredient.ingredientKey && inStockLookup.byKey.has(normalizeKey(ingredient.ingredientKey))) {
+            return total + 1;
+          }
+          if (inStockLookup.byNameUnit.has(nameUnitKey(ingredient.name, ingredient.unit))) {
+            return total + 1;
+          }
+          return total;
+        }, 0);
+
+        const ingredientCount = dish.ingredients.length || 1;
+        const overlapScore = overlap / ingredientCount;
+        const stockScore = stockCount / ingredientCount;
+        const lastUsedISO = lastUsedBeforeWeekStart.get(dish.id) ?? null;
+        const daysSinceLastUsed = lastUsedISO
+          ? Math.floor((weekStart.getTime() - new Date(`${lastUsedISO}T00:00:00`).getTime()) / 86400000)
+          : null;
+        const varietyScore =
+          lastUsedISO === null
+            ? 1
+            : daysSinceLastUsed !== null && daysSinceLastUsed >= 30
+              ? 1
+              : daysSinceLastUsed !== null && daysSinceLastUsed >= 14
+                ? 0.7
+                : 0;
+
+        const score = overlapScore * 0.45 + stockScore * 0.35 + varietyScore * 0.2;
+        const scoreLevel: RecommendationScoreLevel =
+          score >= 0.67 ? "high" : score >= 0.4 ? "medium" : "low";
+
+        const reasons = {
+          economy: overlap >= 2 || overlapScore >= 0.35,
+          stock: stockCount >= 2 || stockScore >= 0.35,
+          variety: varietyScore >= 0.7,
+        };
+
+        return { dish, overlap, stockCount, score, scoreLevel, reasons, lastUsedISO };
       })
-      .sort((a, b) => b.overlap - a.overlap);
+      .sort((a, b) => b.score - a.score || b.overlap - a.overlap);
     return scored.slice(0, 12);
-  }, [dishes, ingredientPool, weekDishIds]);
+  }, [
+    dishes,
+    ingredientPool,
+    weekDishIds,
+    inStockLookup,
+    lastUsedBeforeWeekStart,
+    weekStart,
+  ]);
 
   const dishesByMeal = useMemo(() => {
     const map: Record<MealSlot, Dish[]> = {
@@ -150,16 +277,35 @@ export function CalendarPage({
         <div className="lg:col-span-3 space-y-4">
           {weekDays.map((date) => {
             const iso = toDateISO(date);
+            const plan = planFor(iso);
+            const filledSlots = MEAL_ORDER.reduce((count, slot) => count + (plan.slots[slot] ? 1 : 0), 0);
+            const totalSlots = MEAL_ORDER.length;
+            const coverageTone = filledSlots === 0 ? "neutral" : filledSlots === totalSlots ? "success" : "warn";
+            const totalCalories = MEAL_ORDER.reduce((sum, slot) => {
+              const dishId = plan.slots[slot];
+              if (!dishId) return sum;
+              return sum + (dishById.get(dishId)?.calories ?? 0);
+            }, 0);
             return (
               <div key={iso} className="rounded-2xl border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">
-                    {date.toLocaleDateString(locale, {
-                      weekday: "long",
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
-                  </h3>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {date.toLocaleDateString(locale, {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusBadge tone={coverageTone}>
+                        {t("calendar.daySummary.coverage", { filled: filledSlots, total: totalSlots })}
+                      </StatusBadge>
+                      <StatusBadge tone="neutral">
+                        {t("calendar.daySummary.caloriesTotal", { calories: Math.round(totalCalories) })}
+                      </StatusBadge>
+                    </div>
+                  </div>
                   <button
                     className="text-sm px-2 py-1 rounded-lg border"
                     onClick={() => {
@@ -178,7 +324,7 @@ export function CalendarPage({
                       key={slot}
                       slot={slot}
                       dishes={dishesByMeal[slot]}
-                      value={planFor(iso).slots[slot]}
+                      value={plan.slots[slot]}
                       onChange={(dishId) => setSlot(iso, slot, dishId)}
                       busy={busyDate === iso}
                       allDishes={dishes}
@@ -195,19 +341,73 @@ export function CalendarPage({
           <div className="rounded-2xl border bg-white p-4 shadow-sm sticky top-20">
             <h3 className="font-semibold text-gray-900">{t("calendar.recommendationsTitle")}</h3>
             <p className="text-sm text-gray-500">{t("calendar.recommendationsHint")}</p>
-      <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
-        {recommendations.map(({ dish, overlap }) => (
-          <div key={dish.id} className="p-2 rounded-xl border">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="font-medium text-sm text-gray-900">{dish.name}</div>
-                <div className="text-xs text-gray-500">
-                  {t(MEAL_LABEL_KEYS[dish.meal])} · {t("calendar.matches", { count: overlap })}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {t("calendar.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
-                </div>
-              </div>
+            <div className="mt-3 space-y-2 max-h-[60vh] overflow-auto pr-1">
+              {inventoryError && (
+                <InlineAlert
+                  tone="warn"
+                  message={
+                    t("calendar.recommendations.inventoryWarning", { message: inventoryError }) as string
+                  }
+                />
+              )}
+
+              {recommendations.map(({ dish, overlap, stockCount, scoreLevel, reasons, lastUsedISO }) => (
+                <div
+                  key={dish.id}
+                  className={`p-2 rounded-xl border ${
+                    scoreLevel === "high"
+                      ? "border-[color:var(--ui-success-border)] bg-[color:var(--ui-success-bg)]"
+                      : scoreLevel === "medium"
+                        ? "border-[color:var(--ui-info-border)] bg-[color:var(--ui-info-bg)]"
+                        : "border-[color:var(--ui-border)] bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium text-sm text-gray-900">{dish.name}</div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <StatusBadge tone={scoreTone(scoreLevel)}>
+                          {t("calendar.recommendations.scoreBadge", {
+                            level: t(`calendar.recommendations.score.${scoreLevel}`),
+                          })}
+                        </StatusBadge>
+                        {reasons.economy && (
+                          <StatusBadge tone="info">
+                            {t("calendar.recommendations.reasons.economy")}
+                          </StatusBadge>
+                        )}
+                        {reasons.stock && (
+                          <StatusBadge tone="success">
+                            {t("calendar.recommendations.reasons.stock")}
+                          </StatusBadge>
+                        )}
+                        {reasons.variety && (
+                          <StatusBadge tone="neutral">
+                            {t("calendar.recommendations.reasons.variety")}
+                          </StatusBadge>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {t(MEAL_LABEL_KEYS[dish.meal])} · {t("calendar.matches", { count: overlap })}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {!inventoryLoading && (
+                          <>
+                            {t("calendar.recommendations.stockLine", {
+                              count: stockCount,
+                              total: dish.ingredients.length,
+                            })}
+                            {" · "}
+                          </>
+                        )}
+                        {lastUsedISO
+                          ? t("calendar.recommendations.lastUsed", { date: lastUsedISO })
+                          : t("calendar.recommendations.neverUsed")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {t("calendar.caloriesLabel", { calories: Math.round(dish.calories ?? 0) })}
+                      </div>
+                    </div>
                     <button
                       className="text-xs px-2 py-1 rounded-lg border"
                       onClick={() => {
@@ -231,17 +431,18 @@ export function CalendarPage({
                       {t("calendar.add")}
                     </button>
                   </div>
-          <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
-                {dish.ingredients.slice(0, 4).map((ingredient) => (
-                  <li key={ingredient.id}>
-                    {resolveIngredientName(ingredient.name, ingredient.unit)} ({ingredient.qty}
-                    {formatUnit(ingredient.unit)})
-                  </li>
-                ))}
+                  <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
+                    {dish.ingredients.slice(0, 4).map((ingredient) => (
+                      <li key={ingredient.id}>
+                        {resolveIngredientName(ingredient.name, ingredient.unit)} ({ingredient.qty}
+                        {formatUnit(ingredient.unit)})
+                      </li>
+                    ))}
                     {dish.ingredients.length > 4 && <li>…</li>}
                   </ul>
                 </div>
               ))}
+
               {!recommendations.length && (
                 <div className="text-sm text-gray-500">{t("calendar.recommendationsEmpty")}</div>
               )}
