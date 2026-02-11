@@ -1,6 +1,6 @@
 # Progress Tracking
 
-Last updated: 2026-02-09
+Last updated: 2026-02-11
 
 ## Purpose
 Single source of truth for implementation progress across all active plans.
@@ -18,13 +18,14 @@ Single source of truth for implementation progress across all active plans.
 |---|---|---|---|---|
 | Inventory Management | `docs/new-page-execution-plan.md` | Post-cutover fixes | in_progress | Stabilization and parity checks as needed |
 | Functions Unification | `docs/functions-unification-plan-2026-02-08.md` | Step 10 | completed | E2E smoke + API integration checks |
-| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 8 | planned | UX smoke tests |
+| UI/UX Improvement | `docs/ui-improvement-plan-2026-02-08.md` | Step 8 | completed | Cross-browser UX regression sweep and next-track selection |
 | OCR/AI Receipts | `docs/receipt-ocr-ai-plan-2026-02-08.md` | Step 1 | planned | Data model and migration scaffolding |
 | Weekly Recommendations | `docs/weekly-dish-recommendations-plan-2026-02-08.md` | Step 1 | planned | Instrument baseline recommendation events |
 
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
+| 2026-02-11 | UI/UX Improvement | Step 8: added frontend UX smoke tests (App login/navigation/session restore + dialog Escape/focus trap behavior) with Vitest + Testing Library setup | completed | `front: npm run lint`, `npm run test`, `npm run build` | pending |
 | 2026-02-09 | UI/UX Improvement | Step 7: mobile + accessibility hardening (focus-visible styles, dialog focus trap + Escape close, responsive toolbars) | completed | `front: npm run lint`, `npm run build` | 6c7c18b |
 | 2026-02-09 | UI/UX Improvement | Step 6: dashboard-style summary cards + trends/anomaly highlights for spending/dish costs/inventory | completed | `front: npm run lint`, `npm run build` | 9808c84 |
 | 2026-02-09 | UI/UX Improvement | Step 5: calendar day summary + explainable recommendations (score + reasons + inventory-aware stock) | completed | `front: npm run lint` (warnings), `npm run build` | a4bf57d |
