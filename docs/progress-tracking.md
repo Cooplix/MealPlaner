@@ -25,7 +25,7 @@ Single source of truth for implementation progress across all active plans.
 ## Work Log
 | Date | Track | Completed Work | Status | Validation | Commit |
 |---|---|---|---|---|---|
-| 2026-02-11 | UI/UX Improvement | Step 8: added frontend UX smoke tests (App login/navigation/session restore + dialog Escape/focus trap behavior) with Vitest + Testing Library setup | completed | `front: npm run lint`, `npm run test`, `npm run build` | pending |
+| 2026-02-11 | UI/UX Improvement | Step 8: added frontend UX smoke tests (App login/navigation/session restore + dialog Escape/focus trap behavior) with Vitest + Testing Library setup | completed | `front: npm run lint`, `npm run test`, `npm run build` | 0838da4 |
 | 2026-02-09 | UI/UX Improvement | Step 7: mobile + accessibility hardening (focus-visible styles, dialog focus trap + Escape close, responsive toolbars) | completed | `front: npm run lint`, `npm run build` | 6c7c18b |
 | 2026-02-09 | UI/UX Improvement | Step 6: dashboard-style summary cards + trends/anomaly highlights for spending/dish costs/inventory | completed | `front: npm run lint`, `npm run build` | 9808c84 |
 | 2026-02-09 | UI/UX Improvement | Step 5: calendar day summary + explainable recommendations (score + reasons + inventory-aware stock) | completed | `front: npm run lint` (warnings), `npm run build` | a4bf57d |
